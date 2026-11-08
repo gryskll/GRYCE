@@ -21,9 +21,15 @@ const CREDIT_PROPS = {
   'Visual Artist(s)': 'Visual Art',
 };
 
-const { NOTION_TOKEN, SUPABASE_URL, SUPABASE_SECRET_KEY } = process.env;
+const NOTION_TOKEN = process.env.NOTION_TOKEN?.trim();
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY?.trim();
+// Accept the project URL with or without a trailing slash or /rest/v1.
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
 for (const [k, v] of Object.entries({ NOTION_TOKEN, SUPABASE_URL, SUPABASE_SECRET_KEY })) {
   if (!v) throw new Error(`Missing ${k}`);
+}
+if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(SUPABASE_URL)) {
+  console.warn('SUPABASE_URL does not look like https://<project-ref>.supabase.co. Check the secret if this run fails.');
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
