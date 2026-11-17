@@ -91,3 +91,28 @@ summary { cursor: pointer; color: var(--muted); font-size: 14px; }
   .card { padding: 18px 16px; }
   .who #who-name { display: none; }
 }
+
+/* V2: announcements, tasks, member updates */
+.small { font-size: 13px; }
+.pending { color: #7fb6ff; margin: 8px 0 0; }
+.card.attention { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.count.hot { background: var(--warn); color: #0d0d0f; }
+.ann-body { margin: 8px 0 12px; white-space: pre-wrap; }
+.announcement.read .ann-body { color: var(--muted); }
+.primary.small { padding: 8px 16px; margin-top: 0; font-size: 14px; }
+.ghost {
+  background: none; color: var(--text); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 14px; font-size: 13px;
+}
+.ghost:hover { border-color: var(--accent); }
+.update { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 10px; font-size: 13px; }
+.update-form { width: 100%; display: grid; gap: 8px; }
+.update-form p { margin: 0; }
+.update-form input, .update-form textarea {
+  width: 100%; font: inherit; font-size: 14px; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px;
+}
+.update-form input:focus, .update-form textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+.row { display: flex; gap: 14px; align-items: center; }
+.task-done, .task-complete, .task-completed { color: var(--accent); }
+.task-in-progress { color: var(--warn); }

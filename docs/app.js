@@ -21,7 +21,9 @@ function el(tag, attrs = {}, ...children) {
 const show = (...nodes) => app.replaceChildren(...nodes);
 const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : null);
 const fmtDate = (d) =>
-  d ? new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+  d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+const isPast = (d) => d && new Date(`${d}T23:59:59`) < new Date();
+const slug = (s) => (s || '').toLowerCase().replace(/\s+/g, '-');
 
 if (SUPABASE_URL.startsWith('REPLACE') || SUPABASE_PUBLISHABLE_KEY.startsWith('REPLACE')) {
   show(el('section', { class: 'card' },
@@ -65,26 +67,144 @@ function notLinkedView(email) {
     el('p', { class: 'muted' }, 'Send this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.')));
 }
 
-// Takes -----------------------------------------------------------------
+// Member updates ----------------------------------------------------------
+// Members never edit synced rows. They add a member_updates row, and the sync
+// carries it to Notion on its next run.
+
+let pendingByItem = new Map();   // "take:<id>" or "task:<id>" -> latest unsent update
+
+function pendingNote(kind, id) {
+  const u = pendingByItem.get(`${kind}:${id}`);
+  if (!u) return null;
+  if (u.attempts >= 5) {
+    return el('p', { class: 'error small' }, 'Your update didn’t reach Notion. Tell Shaah so he can check it.');
+  }
+  const what = u.new_status ? `Marked ${u.new_status.toLowerCase()}` : 'Note sent';
+  return el('p', { class: 'pending small' }, `${what}. It shows up in Notion within 30 minutes.`);
+}
+
+// Inline form for one item. newStatus is what the main button sets
+// (Submitted for takes, Done for tasks). Add a note sends a note only.
+function updateForm(kind, id, newStatus, { askLink }) {
+  const box = el('div', { class: 'update' });
+  const closed = () => box.replaceChildren(
+    newStatus && el('button', { class: 'ghost', type: 'button', onclick: () => open(newStatus) },
+      kind === 'take' ? 'Mark submitted' : 'Mark done'),
+    el('button', { class: 'link', type: 'button', onclick: () => open(null) }, 'Add a note'));
+
+  function open(status) {
+    const note = el('textarea', { rows: '2', maxlength: '1000', placeholder: status ? 'Note for Shaah (optional)' : 'Your note' });
+    const link = askLink && el('input', { type: 'url', maxlength: '500', placeholder: 'Link to the file (optional)' });
+    const msg = el('p', { class: 'error small', hidden: true });
+    const send = el('button', { class: 'primary small', type: 'submit' }, status ? 'Send' : 'Send note');
+    const form = el('form', {
+      class: 'update-form',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const row = {
+          item_type: kind,
+          item_id: id,
+          new_status: status,
+          note: note.value.trim() || null,
+          link: link ? link.value.trim() || null : null,
+        };
+        if (row.link && !safeUrl(row.link)) return fail('Links need to start with https://');
+        if (!row.new_status && !row.note && !row.link) return fail('Write a note first.');
+        send.disabled = true;
+        const { error } = await supabase.from('member_updates').insert(row);
+        if (error) {
+          send.disabled = false;
+          return fail(`Couldn’t send that: ${error.message}. Try again, or tell Shaah if it keeps happening.`);
+        }
+        await refresh();
+      },
+    },
+      status && el('p', { class: 'small muted' },
+        kind === 'take' ? 'This tells Shaah your take is in. He marks it accepted.' : 'This marks the task done in Notion.'),
+      link, note, msg,
+      el('div', { class: 'row' },
+        send,
+        el('button', { class: 'link', type: 'button', onclick: closed }, 'Cancel')));
+    function fail(t) { msg.textContent = t; msg.hidden = false; }
+    box.replaceChildren(form);
+    (link || note).focus();
+  }
+
+  closed();
+  return box;
+}
+
+// Announcements -----------------------------------------------------------
+
+function announcementCard(a, acked) {
+  const msg = el('p', { class: 'error small', hidden: true });
+  return el('li', { class: acked ? 'announcement read' : 'announcement' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, a.title),
+      a.publish_date && el('span', { class: 'take-name' }, fmtDate(a.publish_date))),
+    a.body && el('p', { class: 'ann-body' }, a.body),
+    acked
+      ? el('p', { class: 'small muted' }, `Acknowledged ${fmtDate(acked.acknowledged_at)}`)
+      : el('button', {
+        class: 'primary small', type: 'button',
+        onclick: async (e) => {
+          e.currentTarget.disabled = true;
+          const { error } = await supabase.from('announcement_acks').insert({ announcement_id: a.id });
+          // 23505 means it was already acknowledged, maybe in another tab. That's fine.
+          if (error && error.code !== '23505') {
+            e.currentTarget.disabled = false;
+            msg.textContent = `Couldn’t save that: ${error.message}. Try again.`;
+            msg.hidden = false;
+            return;
+          }
+          await refresh();
+        },
+      }, 'Acknowledge'),
+    msg);
+}
+
+function announcementsSection(announcements, acks) {
+  if (announcements.length === 0) return null;
+  const ackBy = new Map(acks.map((k) => [k.announcement_id, k]));
+  const sorted = [...announcements].sort((a, b) => (b.publish_date ?? '').localeCompare(a.publish_date ?? ''));
+  const unread = sorted.filter((a) => !ackBy.has(a.id));
+  const read = sorted.filter((a) => ackBy.has(a.id));
+  return el('section', { class: unread.length ? 'card attention' : 'card' },
+    el('div', { class: 'card-head' },
+      el('h2', {}, 'Crew news'),
+      unread.length > 0 && el('span', { class: 'count hot' }, String(unread.length))),
+    unread.length
+      ? el('ul', { class: 'takes' }, unread.map((a) => announcementCard(a, null)))
+      : el('p', { class: 'muted' }, 'You’re caught up.'),
+    read.length > 0 && el('details', {},
+      el('summary', {}, `Read (${read.length})`),
+      el('ul', { class: 'takes' }, read.map((a) => announcementCard(a, ackBy.get(a.id))))));
+}
+
+// Takes -------------------------------------------------------------------
 
 const OPEN = ['Owed', 'Needs Decision'];
+const isOpenTake = (t) => !t.status || OPEN.includes(t.status);
 
 function takeRow(t) {
   const due = fmtDate(t.due_date);
-  const overdue = t.due_date && t.status === 'Owed' && new Date(`${t.due_date}T23:59:59`) < new Date();
+  const overdue = t.status === 'Owed' && isPast(t.due_date);
+  const pending = pendingNote('take', t.id);
   return el('li', { class: 'take' },
     el('div', { class: 'take-main' },
       el('span', { class: 'take-song' }, t.song?.name ?? 'No song linked'),
       el('span', { class: 'take-name' }, t.name)),
     el('div', { class: 'take-meta' },
       t.type && el('span', { class: 'tag' }, t.type),
-      t.status && el('span', { class: `tag status-${(t.status || '').toLowerCase().replace(/\s+/g, '-')}` }, t.status),
+      t.status && el('span', { class: `tag status-${slug(t.status)}` }, t.status),
       due && el('span', { class: overdue ? 'due overdue' : 'due' }, overdue ? `Overdue · ${due}` : `Due ${due}`)),
-    t.notes && el('p', { class: 'take-notes' }, t.notes));
+    t.notes && el('p', { class: 'take-notes' }, t.notes),
+    pending,
+    isOpenTake(t) && !pending && updateForm('take', t.id, 'Submitted', { askLink: true }));
 }
 
 function takesSection(takes) {
-  const open = takes.filter((t) => OPEN.includes(t.status) || !t.status);
+  const open = takes.filter(isOpenTake);
   const submitted = takes.filter((t) => t.status === 'Submitted');
   const done = takes.filter((t) => t.status === 'Accepted');
 
@@ -102,7 +222,49 @@ function takesSection(takes) {
       el('ul', { class: 'takes' }, done.map(takeRow))));
 }
 
-// Discography -----------------------------------------------------------
+// Tasks -------------------------------------------------------------------
+
+const TASK_DONE = ['Done', 'Complete', 'Completed', 'Archived', 'Canceled', 'Cancelled'];
+const isOpenTask = (k) => !TASK_DONE.includes(k.status);
+
+function taskRow(k, mine) {
+  const due = fmtDate(k.due_date);
+  const overdue = isOpenTask(k) && isPast(k.due_date);
+  const pending = mine && pendingNote('task', k.id);
+  return el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, k.name)),
+    el('div', { class: 'take-meta' },
+      k.is_crew && el('span', { class: 'tag' }, 'Crew'),
+      k.status && el('span', { class: `tag task-${slug(k.status)}` }, k.status),
+      due && el('span', { class: overdue ? 'due overdue' : 'due' }, overdue ? `Overdue · ${due}` : `Due ${due}`)),
+    pending,
+    mine && isOpenTask(k) && !pending && updateForm('task', k.id, 'Done', { askLink: true }));
+}
+
+function tasksSection(tasks, meId) {
+  if (tasks.length === 0) return null;
+  const mineOf = (k) => (k.assignee_ids ?? []).includes(meId);
+  const byDue = (a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || a.name.localeCompare(b.name);
+  const mine = tasks.filter((k) => mineOf(k) && isOpenTask(k)).sort(byDue);
+  const crew = tasks.filter((k) => !mineOf(k) && isOpenTask(k)).sort(byDue);
+  const done = tasks.filter((k) => !isOpenTask(k));
+
+  return el('section', { class: 'card' },
+    el('div', { class: 'card-head' },
+      el('h2', {}, 'Your tasks'),
+      el('span', { class: 'count' }, String(mine.length))),
+    mine.length
+      ? el('ul', { class: 'takes' }, mine.map((k) => taskRow(k, true)))
+      : el('p', { class: 'muted' }, 'No tasks on you right now.'),
+    crew.length > 0 && el('h3', {}, 'Crew tasks'),
+    crew.length > 0 && el('ul', { class: 'takes' }, crew.map((k) => taskRow(k, false))),
+    done.length > 0 && el('details', {},
+      el('summary', {}, `Done (${done.length})`),
+      el('ul', { class: 'takes' }, done.map((k) => taskRow(k, mineOf(k))))));
+}
+
+// Released and In the works --------------------------------------------------
 
 const isReleased = (s) => s.development_stage === 'Released' || s.status === 'Released';
 
@@ -115,61 +277,113 @@ function songRow(s) {
       el('span', { class: 'roles' }, s.roles.join(' · '))),
     el('div', { class: 'song-meta' },
       !isReleased(s) && s.development_stage && el('span', { class: 'tag' }, s.development_stage),
+      s.owes && el('span', { class: 'tag status-owed' }, 'Take owed'),
       when && el('span', { class: 'muted' }, when)));
 }
 
-function discographySection(credits) {
+// Songs come from credits, plus songs where you owe a take but have no credit yet.
+function collectSongs(credits, takes) {
   const bySong = new Map();
   for (const c of credits) {
     if (!c.song) continue;
-    const s = bySong.get(c.song.id) ?? { ...c.song, roles: [] };
+    const s = bySong.get(c.song.id) ?? { ...c.song, roles: [], owes: false };
     if (!s.roles.includes(c.role)) s.roles.push(c.role);
     bySong.set(c.song.id, s);
   }
-  const songs = [...bySong.values()];
-  const released = songs.filter(isReleased)
-    .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
-  const working = songs.filter((s) => !isReleased(s)).sort((a, b) => a.name.localeCompare(b.name));
-
-  return el('section', { class: 'card' },
-    el('div', { class: 'card-head' },
-      el('h2', {}, 'Your GRYSKLL discography'),
-      el('span', { class: 'count' }, String(songs.length))),
-    songs.length === 0 && el('p', { class: 'muted' }, 'No credits on file yet.'),
-    released.length > 0 && el('h3', {}, `Released (${released.length})`),
-    released.length > 0 && el('ul', { class: 'songs' }, released.map(songRow)),
-    working.length > 0 && el('h3', {}, `In the works (${working.length})`),
-    working.length > 0 && el('ul', { class: 'songs' }, working.map(songRow)));
+  for (const t of takes) {
+    if (!t.song || !isOpenTake(t)) continue;
+    const s = bySong.get(t.song.id) ?? { ...t.song, roles: [], owes: false };
+    s.owes = true;
+    if (s.roles.length === 0) s.roles.push(t.type ? `${t.type} owed` : 'Take owed');
+    bySong.set(t.song.id, s);
+  }
+  return [...bySong.values()];
 }
 
-// Main ------------------------------------------------------------------
+function releasedSection(songs) {
+  const released = songs.filter(isReleased)
+    .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
+  return el('section', { class: 'card' },
+    el('div', { class: 'card-head' },
+      el('h2', {}, 'Discography'),
+      el('span', { class: 'count' }, String(released.length))),
+    released.length
+      ? el('ul', { class: 'songs' }, released.map(songRow))
+      : el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'));
+}
+
+function inTheWorksSection(songs) {
+  const working = songs.filter((s) => !isReleased(s))
+    .sort((a, b) => Number(b.owes) - Number(a.owes)
+      || (a.target_release_date ?? '9999').localeCompare(b.target_release_date ?? '9999')
+      || a.name.localeCompare(b.name));
+  return el('section', { class: 'card' },
+    el('div', { class: 'card-head' },
+      el('h2', {}, 'In the works'),
+      el('span', { class: 'count' }, String(working.length))),
+    working.length
+      ? el('ul', { class: 'songs' }, working.map(songRow))
+      : el('p', { class: 'muted' }, 'No songs in the works with your name on them.'));
+}
+
+// Main --------------------------------------------------------------------
+
+const SONG_FIELDS = 'id, name, development_stage, status, release_date, target_release_date, song_link, bandcamp_link';
+let me = null;
+
+// V2 tables may not exist yet while setup is in progress. A missing one
+// shows as empty instead of breaking the page.
+async function optionalRows(query, label) {
+  const { data, error } = await query;
+  if (error) {
+    console.warn(`gryCE: ${label} not loaded: ${error.message}`);
+    return [];
+  }
+  return data ?? [];
+}
+
+async function refresh() {
+  const [takesRes, creditsRes, tasks, announcements, acks, updates] = await Promise.all([
+    supabase.from('takes')
+      .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
+      .order('due_date', { ascending: true, nullsFirst: false }),
+    supabase.from('song_credits').select(`role, song:songs(${SONG_FIELDS})`),
+    optionalRows(supabase.from('tasks').select('id, name, status, due_date, assignee_ids, is_crew'), 'tasks'),
+    optionalRows(supabase.from('announcements').select('id, title, body, publish_date'), 'announcements'),
+    optionalRows(supabase.from('announcement_acks').select('announcement_id, acknowledged_at'), 'acknowledgements'),
+    optionalRows(supabase.from('member_updates')
+      .select('item_type, item_id, new_status, created_at, attempts')
+      .is('processed_at', null)
+      .order('created_at', { ascending: true }), 'updates'),
+  ]);
+  const err = takesRes.error || creditsRes.error;
+  if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
+
+  pendingByItem = new Map(updates.map((u) => [`${u.item_type}:${u.item_id}`, u]));
+  const songs = collectSongs(creditsRes.data, takesRes.data);
+
+  show(
+    el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`),
+    announcementsSection(announcements, acks),
+    takesSection(takesRes.data),
+    tasksSection(tasks, me.id),
+    inTheWorksSection(songs),
+    releasedSection(songs),
+  );
+}
 
 async function render(session) {
   if (!session) return signInView();
 
   const email = session.user.email;
-  const { data: me, error: meErr } = await supabase.from('artists').select('id, name').maybeSingle();
+  const { data, error: meErr } = await supabase.from('artists').select('id, name').maybeSingle();
   if (meErr) return show(el('p', { class: 'error' }, `Couldn’t load your profile: ${meErr.message}`));
-  if (!me) return notLinkedView(email);
+  if (!data) return notLinkedView(email);
+  me = data;
 
   document.getElementById('who-name').textContent = me.name;
   document.getElementById('who').hidden = false;
-
-  const [takesRes, creditsRes] = await Promise.all([
-    supabase.from('takes')
-      .select('id, name, type, status, due_date, notes, song:songs(name)')
-      .order('due_date', { ascending: true, nullsFirst: false }),
-    supabase.from('song_credits')
-      .select('role, song:songs(id, name, development_stage, status, release_date, target_release_date, song_link, bandcamp_link)'),
-  ]);
-  const err = takesRes.error || creditsRes.error;
-  if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}`));
-
-  show(
-    el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`),
-    takesSection(takesRes.data),
-    discographySection(creditsRes.data),
-  );
+  await refresh();
 }
 
 let renderedFor;

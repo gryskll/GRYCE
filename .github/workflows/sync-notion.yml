@@ -26,3 +26,4 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          NOTION_WRITE_TOKEN: ${{ secrets.NOTION_WRITE_TOKEN }}   # optional until the gryCE Write connection exists
