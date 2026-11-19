@@ -10,6 +10,10 @@ GRYSKLL Creative Engine. A member portal: crew members sign in with Google and s
 - **Supabase** holds the copy, handles Google sign-in, and uses row level security so each member only sees their own rows.
 - **GitHub Pages** serves the site from `docs/`.
 
+## Version
+
+The version shows in the footer of every page, including sign-in. It lives in one place, `docs/index.html`. V1 was 0.1, V2 was 0.2, and V3 is 0.3. It stays under 1.0 while gryCE is in development. Bump it with every release.
+
 ## Access
 
 A member can see their page when their Google sign-in email is in the **Email** field of their Artists record in Notion. Adding the email is the approval. Anyone else who signs in sees a "not linked yet" message and no data.
