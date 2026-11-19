@@ -245,7 +245,25 @@ a.help-button:hover { text-decoration: none; }
 /* v0.4.7: contributions by project, stage and type */
 .contrib-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
 .contrib-head h3, .contrib-head h4 { margin-bottom: 6px; }
-.contrib-stage { margin-top: 14px; padding-left: 12px; border-left: 2px solid var(--line); }
-.contrib-stage h4 { margin: 0 0 6px; font-size: 15px; }
-.contrib-type { margin-top: 10px; }
+/* Each stage is its own tinted box. Pre-campaign money gets a warm edge. */
+.contrib-stage {
+  margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-left: 4px solid var(--accent);
+}
+.contrib-stage.before {
+  background: color-mix(in srgb, var(--warn) 6%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 25%, transparent);
+  border-left-color: var(--warn);
+}
+.contrib-stage h4 { margin: 0 0 4px; font-family: 'Archivo Black', sans-serif; font-weight: 400; font-size: 16px; }
+.contrib-stage.before h4 { color: var(--warn); }
+/* Contributor types each get their own color. */
+.contrib-type { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.contrib-type:first-of-type { border-top: 0; }
+.contrib-type h5 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
+.type-crew h5 { color: var(--accent); }
+.type-crewmunity h5 { color: #7fb6ff; }
+.type-family-loan h5 { color: #ff9f5a; }
 .contrib-type .takes { margin-top: 6px; }

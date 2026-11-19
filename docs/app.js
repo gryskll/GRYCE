@@ -741,16 +741,18 @@ function leadershipView(d) {
       c.repayment && el('span', { class: `tag ${c.repayment === 'Owed' ? 'status-owed' : c.repayment === 'Repaid' ? 'status-accepted' : ''}` }, c.repayment),
       c.contributed_on && el('span', { class: 'muted' }, fmtDate(c.contributed_on))));
 
-  const typeBlock = ([type, list]) => el('div', { class: 'contrib-type' },
-    el('div', { class: 'contrib-head' }, el('span', { class: 'tag' }, type), totals(list)),
+  const typeBlock = ([type, list]) => el('div', { class: `contrib-type type-${slug(type)}` },
+    el('div', { class: 'contrib-head' }, el('h5', {}, type), totals(list)),
     el('ul', { class: 'takes' }, list.map(contribRow)));
 
-  const stageBlock = (project) => ([stage, list]) => el('div', { class: 'contrib-stage' },
+  const stageBlock = (project) => ([stage, list]) => el('div', { class: `contrib-stage${stage === BEFORE ? ' before' : ''}` },
     el('div', { class: 'contrib-head' }, el('h4', {}, stage), totals(list)),
     [...groupBy(list, (c) => c.type ?? 'No type')]
       .sort((a, b) => typeRank(a[0]) - typeRank(b[0]) || a[0].localeCompare(b[0]))
       .map(typeBlock));
 
+  // Money with no stage came in before the album campaign started.
+  const BEFORE = 'Before the album';
   const byProject = [...groupBy(contribs, (c) => c.project_name ?? 'No project')]
     .sort((a, b) => a[0].localeCompare(b[0]));
 
@@ -771,8 +773,10 @@ function leadershipView(d) {
       contribs.length === 0 && el('p', { class: 'muted' }, 'No contributions yet.'),
       byProject.map(([project, list]) => el('div', { class: 'block' },
         el('div', { class: 'contrib-head' }, el('h3', {}, project), totals(list)),
-        [...groupBy(list, (c) => c.stage_name ?? 'No stage')]
-          .sort((a, b) => (stageNo.get(`${project}|${a[0]}`) ?? 99) - (stageNo.get(`${project}|${b[0]}`) ?? 99) || a[0].localeCompare(b[0]))
+        [...groupBy(list, (c) => c.stage_name ?? BEFORE)]
+          // Before the album first, then stages in order.
+          .sort((a, b) => (a[0] === BEFORE ? -1 : b[0] === BEFORE ? 1 : 0)
+            || (stageNo.get(`${project}|${a[0]}`) ?? 99) - (stageNo.get(`${project}|${b[0]}`) ?? 99) || a[0].localeCompare(b[0]))
           .map(([stage, sl]) => {
             const n = stageNo.get(`${project}|${stage}`);
             return stageBlock(project)([n && n !== 99 ? `Stage ${n}, ${stage}` : stage, sl]);
