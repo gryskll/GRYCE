@@ -546,6 +546,8 @@ const contributions = !CONTRIBUTIONS_DB ? null : await optional('contributions',
       // Supporters database. Only the id comes across, never contact details.
       contributor_name: titleOf(p),
       supporter_id: (await relation(p, 'Supporter'))[0] ?? null,
+      // Formula on Contributions: true when it links to an Artist or a Supporter.
+      person_linked: p.properties['Linked to Person']?.formula?.boolean ?? null,
       repayment: select(p.properties['Repayment']),
       contributed_on: date(p.properties['Date']),
       synced_at: runStart,
