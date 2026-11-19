@@ -46,7 +46,7 @@ document.getElementById('sign-out').addEventListener('click', async () => {
 
 function signInView(error) {
   show(el('section', { class: 'hero' },
-    el('div', { class: 'wordmark-plate' }, el('img', { src: 'img/wordmark.png', alt: 'GRYSKLL', width: '800', height: '385' })),
+    el('img', { class: 'signin-mark', src: 'img/skull-green.png', alt: 'GRYSKLL', width: '182', height: '256' }),
     el('p', { class: 'eyebrow' }, 'GRYSKLL members'),
     el('h1', {}, 'Your takes. Your catalog.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),

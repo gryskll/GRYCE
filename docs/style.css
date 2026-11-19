@@ -201,3 +201,4 @@ a.brand { color: var(--text); text-decoration: none; }
 .help .card li:last-child, .help .card p:last-child { margin-bottom: 0; }
 .home-help { margin-top: 18px; text-align: center; }
 .help-intro { margin: 0 0 20px; }
+.signin-mark { display: block; width: 96px; height: auto; margin-bottom: 28px; }
