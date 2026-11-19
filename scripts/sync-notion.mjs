@@ -606,11 +606,6 @@ const documents = !DOCUMENTS_DB ? null : await optional('documents', async () =>
   }));
 });
 
-// Parents first, then children. Stale rows go children first.
-await upsertNewCols('artists', artists, V041_ARTIST);
-await upsertNewCols('songs', songs, V041_SONG);
-await upsert('song_credits', credits, 'song_id,artist_id,role');
-await upsert('takes', takes, 'id');
 // v0.4.1 columns may not exist yet. If the first save fails, save again without them.
 const V041_ARTIST = ['leadership', 'isrc_admin', 'also_known_as'];
 const V041_SONG = ['isrc', 'isrc_reissue'];
@@ -624,6 +619,11 @@ async function upsertNewCols(table, rows, cols) {
     await upsert(table, without(rows, cols), 'id');
   }
 }
+// Parents first, then children. Stale rows go children first.
+await upsertNewCols('artists', artists, V041_ARTIST);
+await upsertNewCols('songs', songs, V041_SONG);
+await upsert('song_credits', credits, 'song_id,artist_id,role');
+await upsert('takes', takes, 'id');
 // V2 tables may not exist yet in Supabase. A failed save skips that table's cleanup too.
 const tasksSaved = tasks && (await optional('tasks save', () => upsert('tasks', tasks, 'id').then(() => true)));
 const annSaved = announcements && (await optional('announcements save', () => upsert('announcements', announcements, 'id').then(() => true)));
