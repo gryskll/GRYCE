@@ -299,7 +299,7 @@ function crewView(d) {
 // Project updates: where each active project stands, songs and funding --------
 
 const STAGE_ORDER = ['Released', 'Release Ready', 'Mastering', 'Re-Mastering', 'Mixing', 'Mixing Prep',
-  'Recording', 'Arrangement', 'Songwriting', 'Pending Review', 'Idea/Concept', 'Artwork Needed'];
+  'Awaiting Mix Funding', 'Recording', 'Arrangement', 'Songwriting', 'Pending Review', 'Idea/Concept', 'Artwork Needed'];
 const stageRank = (s) => { const i = STAGE_ORDER.indexOf(s); return i < 0 ? 99 : i; };
 
 const money = (n) => new Intl.NumberFormat('en-US', {
@@ -351,29 +351,53 @@ function owedLine(stages, itemsByStage, mine) {
       repayStage ? `It’s paid back at face value in ${stageLabel(repayStage)}.` : 'It’s paid back at face value.'));
 }
 
+// Funding opens on the current stage. Two buttons switch between it and every stage.
+function stageRow(s, itemsByStage) {
+  const its = itemsByStage.get(s.id) ?? [];
+  const goal = goalOf(its);
+  const raised = money(Number(s.raised) || 0);
+  return el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, stageLabel(s)),
+      el('span', { class: 'take-name' }, goal > 0 ? `${raised} of ${money(goal)}` : `${raised} raised`)),
+    el('div', { class: 'take-meta' }, s.status && el('span', { class: `tag stage-${slug(s.status)}` }, s.status)),
+    its.length > 0 && el('ul', { class: 'takes nested' }, its.map(itemRow)));
+}
+
 function fundingBlock(stages, itemsByStage, contributions) {
   if (stages.length === 0) return null;
   const list = [...stages].sort((a, b) => (a.stage_number ?? 99) - (b.stage_number ?? 99));
   const current = list.find((s) => s.status === 'Underway') ?? list.find((s) => s.status !== 'Complete');
   const currentItems = current ? itemsByStage.get(current.id) ?? [] : [];
+
+  const currentPane = el('div', { class: 'pane' },
+    current
+      ? [el('p', { class: 'stage-now' }, stageLabel(current)),
+        moneyLine(current, currentItems),
+        currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow))]
+      : el('p', { class: 'muted' }, 'Every stage is complete.'));
+  const allPane = el('div', { class: 'pane', hidden: true },
+    el('ul', { class: 'takes' }, list.map((s) => stageRow(s, itemsByStage))));
+
+  const btnCurrent = el('button', { class: 'seg on', type: 'button', 'aria-pressed': 'true' }, 'Current stage');
+  const btnAll = el('button', { class: 'seg', type: 'button', 'aria-pressed': 'false' }, `All stages (${list.length})`);
+  const pick = (showAll) => {
+    allPane.hidden = !showAll;
+    currentPane.hidden = showAll;
+    btnAll.classList.toggle('on', showAll);
+    btnCurrent.classList.toggle('on', !showAll);
+    btnAll.setAttribute('aria-pressed', String(showAll));
+    btnCurrent.setAttribute('aria-pressed', String(!showAll));
+  };
+  btnCurrent.addEventListener('click', () => pick(false));
+  btnAll.addEventListener('click', () => pick(true));
+
   return el('div', { class: 'block' },
-    el('h3', {}, current ? `Funding · Stage ${current.stage_number ?? ''} of ${list.length}, ${current.name}` : 'Funding · complete'),
-    current && moneyLine(current, currentItems),
-    currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow)),
-    owedLine(list, itemsByStage, contributions),
-    el('details', {},
-      el('summary', {}, `All funding stages (${list.length})`),
-      el('ul', { class: 'takes' }, list.map((s) => {
-        const its = itemsByStage.get(s.id) ?? [];
-        const goal = goalOf(its);
-        const raised = money(Number(s.raised) || 0);
-        return el('li', { class: 'take' },
-          el('div', { class: 'take-main' },
-            el('span', { class: 'take-song' }, stageLabel(s)),
-            el('span', { class: 'take-name' }, goal > 0 ? `${raised} of ${money(goal)}` : `${raised} raised`)),
-          el('div', { class: 'take-meta' }, s.status && el('span', { class: `tag stage-${slug(s.status)}` }, s.status)),
-          s.id !== current?.id && its.length > 0 && el('ul', { class: 'takes nested' }, its.map(itemRow)));
-      }))));
+    el('h3', {}, current ? `Funding · Stage ${current.stage_number ?? ''} of ${list.length}` : 'Funding · complete'),
+    el('div', { class: 'segs', role: 'group', 'aria-label': 'Funding stages' }, btnCurrent, btnAll),
+    currentPane,
+    allPane,
+    owedLine(list, itemsByStage, contributions));
 }
 
 function songsBlock(songs) {

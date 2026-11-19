@@ -49,8 +49,8 @@ const HELP = `
       <ul>
         <li><strong>Release date</strong> and a short summary.</li>
         <li><strong>Outstanding:</strong> what the project is still waiting on, by person. Everyone sees this list, so the crew knows what's holding things up.</li>
-        <li><strong>Songs:</strong> how many songs are at each stage, from Arrangement through Released. Tap <strong>Song by song</strong> for the full list.</li>
-        <li><strong>Funding:</strong> the stage that's open now, what's been raised against the goal, and what the money pays for. A stage's goal goes up as price quotes come in. Tap <strong>All funding stages</strong> to see the rest.</li>
+        <li><strong>Songs:</strong> how many songs are at each stage, from Arrangement through Released. Tap <strong>Song by song</strong> for the full list. <strong>Awaiting Mix Funding</strong> means a song is ready to mix and waiting on the money to pay for it.</li>
+        <li><strong>Funding:</strong> the stage that's open now, what's been raised against the goal, and what the money pays for. A stage's goal goes up as price quotes come in. It opens on the current stage. Tap <strong>All stages</strong> to see every stage and what each one pays for.</li>
       </ul>
       <p>If you've put money into a project, you'll also see how much you put in, and which stage pays it back at face value.</p>
     </section>
