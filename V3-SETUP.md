@@ -36,3 +36,12 @@ Actions, Sync Notion to Supabase, Run workflow. The last line should include `fu
 - New money in: update Raised on the stage, and add a row in Contributions.
 - New quote: put the amount in Quote and set Status to Quoted. The goal updates on the next sync.
 - Stage moves on: set the old stage to Complete and the next one to Underway. The card follows.
+
+## v0.3.2: tiles, Requests and Project updates
+
+**SQL:** `supabase/migrations/v3-2-projects.sql`, same path as step 1. Run it before the next sync, or announcements stop updating until you do.
+
+**Notion: done November 19.**
+- Announcements has a **Type** field: Request or News. Requests show under What you owe. News, or blank, shows under Crew news.
+- Music Projects has a **gryCE Update** field. Whatever you type there shows at the top of that project in Project updates.
+- Project updates shows projects with Status In Production or Mixing & Mastering, with each song's Development Stage and the project's funding.
