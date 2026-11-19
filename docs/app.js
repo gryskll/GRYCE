@@ -241,8 +241,10 @@ function owed(d) {
   const openTasks = mine.filter(isOpenTask).sort(byDue);
   const overdue = openTakes.some((t) => t.status === 'Owed' && isPast(t.due_date))
     || openTasks.some((k) => isPast(k.due_date));
-  return { ackBy, requests, takes, openTakes, mine, openTasks, overdue,
-    count: requests.unread.length + openTakes.length + openTasks.length };
+  // Leadership: documents submitted for review count as something you owe.
+  const docsToReview = me?.leadership ? docsWaiting(d) : [];
+  return { ackBy, requests, takes, openTakes, mine, openTasks, overdue, docsToReview,
+    count: requests.unread.length + openTakes.length + openTasks.length + docsToReview.length };
 }
 
 function oweView(d) {
@@ -259,6 +261,9 @@ function oweView(d) {
     o.openTakes.length > 0 && el('ul', { class: 'takes' }, o.openTakes.map(takeRow)),
     o.openTasks.length > 0 && el('h3', {}, 'Tasks'),
     o.openTasks.length > 0 && el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))),
+    o.docsToReview.length > 0 && el('h3', {}, 'Documents to review'),
+    o.docsToReview.length > 0 && el('p', { class: 'small muted' }, 'Submitted to Leadership. Open each one to review it.'),
+    o.docsToReview.length > 0 && el('ul', { class: 'takes' }, o.docsToReview.map(docRow)),
     submitted.length > 0 && el('h3', {}, 'Submitted, waiting on review'),
     submitted.length > 0 && el('ul', { class: 'takes' }, submitted.map(takeRow)),
     (accepted.length + doneTasks.length + o.requests.read.length) > 0 && el('details', {},
@@ -644,10 +649,30 @@ function isrcView(d) {
 
 // Leadership (Leadership only) ------------------------------------------------
 
+// Submitted = sent to Leadership and waiting on review.
+const docsWaiting = (d) => (d.leadership?.documents ?? [])
+  .filter((x) => x.status === 'Submitted')
+  .sort((a, b) => (a.date_submitted ?? '9999').localeCompare(b.date_submitted ?? '9999') || a.number.localeCompare(b.number));
+
+function docRow(x) {
+  const link = safeUrl(x.link);
+  return el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, x.number),
+      link ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'take-name' }, x.name ?? 'Open') : el('span', { class: 'take-name' }, x.name ?? '')),
+    el('div', { class: 'take-meta' },
+      x.status && el('span', { class: `tag doc-${slug(x.status)}` }, x.status),
+      x.date_submitted && el('span', { class: 'muted' }, `Submitted ${fmtDate(x.date_submitted)}`),
+      x.date_approved && el('span', { class: 'muted' }, `Approved ${fmtDate(x.date_approved)}`),
+      !link && el('span', { class: 'muted' }, 'No link yet')),
+    x.notes && el('p', { class: 'take-notes' }, x.notes));
+}
+
 function leadershipView(d) {
   const docs = [...(d.leadership?.documents ?? [])].sort((a, b) => a.number.localeCompare(b.number));
   const contribs = d.leadership?.contributions ?? [];
-  const waiting = docs.filter((x) => x.status === 'Submitted').length;
+  const toReview = docsWaiting(d);
+  const waiting = toReview.length;
 
   const byProject = new Map();
   for (const c of contribs) {
@@ -657,23 +682,18 @@ function leadershipView(d) {
   }
   const sum = (list, pred = () => true) => list.filter(pred).reduce((n, c) => n + (Number(c.amount) || 0), 0);
 
+  const rest = docs.filter((x) => x.status !== 'Submitted');
   return [
-    panel('Document registry', waiting ? countTag(waiting, true) : countTag(docs.length),
-      waiting > 0 && el('p', { class: 'small muted' }, `${waiting} waiting on Leadership.`),
-      docs.length
-        ? el('ul', { class: 'takes' }, docs.map((x) => {
-          const link = safeUrl(x.link);
-          return el('li', { class: 'take' },
-            el('div', { class: 'take-main' },
-              el('span', { class: 'take-song' }, x.number),
-              link ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'take-name' }, x.name ?? 'Open') : el('span', { class: 'take-name' }, x.name ?? '')),
-            el('div', { class: 'take-meta' },
-              x.status && el('span', { class: `tag doc-${slug(x.status)}` }, x.status),
-              x.date_submitted && el('span', { class: 'muted' }, `Submitted ${fmtDate(x.date_submitted)}`),
-              x.date_approved && el('span', { class: 'muted' }, `Approved ${fmtDate(x.date_approved)}`)),
-            x.notes && el('p', { class: 'take-notes' }, x.notes));
-        }))
-        : el('p', { class: 'muted' }, 'Nothing in the registry yet.')),
+    panel('Waiting on your review', countTag(waiting, waiting > 0),
+      waiting
+        ? el('ul', { class: 'takes' }, toReview.map(docRow))
+        : el('p', { class: 'muted' }, 'No documents waiting on Leadership.')),
+    panel('Document registry', countTag(docs.length),
+      rest.length
+        ? el('details', {},
+          el('summary', {}, `Every other document (${rest.length})`),
+          el('ul', { class: 'takes' }, rest.map(docRow)))
+        : el('p', { class: 'muted' }, 'Nothing else in the registry yet.')),
     panel('Contributions', countTag(contribs.length),
       el('p', { class: 'small muted' }, 'Everyone’s contributions. Only Leadership sees this. Members see only their own.'),
       contribs.length === 0 && el('p', { class: 'muted' }, 'No contributions yet.'),
@@ -728,8 +748,8 @@ function homeView(d) {
       return tile('isrc', 'ISRC codes', String(open), open === 1 ? 'Song without a code' : 'Songs without a code');
     })(),
     me?.leadership && (() => {
-      const waiting = (d.leadership?.documents ?? []).filter((x) => x.status === 'Submitted').length;
-      return tile('leadership', 'Leadership', String(waiting), waiting ? 'Waiting on you' : 'Nothing waiting', waiting ? 'hot' : null);
+      const waiting = docsWaiting(d).length;
+      return tile('leadership', 'Leadership', String(waiting), waiting ? (waiting === 1 ? 'Doc to review' : 'Docs to review') : 'Nothing to review', waiting ? 'hot' : null);
     })());
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
@@ -763,7 +783,7 @@ function draw() {
   if (view) {
     show(el('nav', { class: 'crumbs' }, backLink(), el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
-    show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeHelp()), homeView(current));
+    show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `Peace, ${me.name}`), homeHelp()), homeView(current));
   }
   window.scrollTo(0, 0);
 }

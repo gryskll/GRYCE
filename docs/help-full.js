@@ -67,7 +67,8 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Leadership</h2>
-      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile with the document registry (every GRY-DOC number, its status and a link) and every member's project contributions.</p>
+      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on documents waiting on your review, then the rest of the document registry (every GRY-DOC number, its status and a link), then every member's project contributions.</p>
+      <p>A document waiting on review also shows under <strong>What you owe</strong>, and lights up both tiles. A document is waiting when its status is Submitted.</p>
     </section>
 <section class="card">
       <h2>Who sees what</h2>
