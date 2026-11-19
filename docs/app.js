@@ -430,7 +430,7 @@ function projectsView(d) {
   }
   const list = projectsOf(d);
   if (list.length === 0) return panel('Project updates', null, el('p', { class: 'muted' }, 'No active projects right now.'));
-  return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'tag' }, p.status),
+  return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'pill' }, p.status),
     p?.release_date && el('p', { class: 'release' }, `Release: ${new Date(`${p.release_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`),
     p?.summary && el('p', { class: 'ann-body' }, p.summary),
     outstandingBlock(p?.songs),
@@ -527,6 +527,7 @@ function homeView(d) {
 }
 
 const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography' };
 
 // Main --------------------------------------------------------------------
 
@@ -549,7 +550,8 @@ function draw() {
   if (!current) return;
   const view = VIEWS[location.hash.slice(1)];
   if (view) {
-    show(backLink(), view(current));
+    const key = location.hash.slice(1);
+    show(el('nav', { class: 'crumbs' }, backLink(), el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
     show(el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeView(current));
   }

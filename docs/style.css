@@ -162,3 +162,23 @@ ul.takes.nested { margin: 6px 0 0 14px; }
 .dev-released { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .dev-mastering, .dev-re-mastering, .dev-release-ready { color: #7fb6ff; border-color: #7fb6ff66; }
 .dev-arrangement, .dev-mixing, .dev-mixing-prep, .dev-recording { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+
+/* v0.3.5: easier to tell where you are */
+.crumbs { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 16px; }
+.crumbs .back { margin: 0; }
+.crumbs .here {
+  color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; font-size: 12px; font-weight: 700;
+}
+.crumbs .here::before { content: '/'; color: var(--line); margin-right: 10px; }
+.card h3 {
+  color: var(--accent); border-left: 3px solid var(--accent); padding-left: 10px;
+  font-size: 13px; letter-spacing: 1.2px;
+}
+.block h3 { margin-top: 18px; }
+.pill {
+  white-space: nowrap; flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px;
+  color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+}
+.card-head .tag { white-space: nowrap; flex-shrink: 0; }
+.card-head h2 { line-height: 1.15; }
