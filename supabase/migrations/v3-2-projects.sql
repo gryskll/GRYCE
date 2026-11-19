@@ -5,7 +5,7 @@
 -- Request: something members owe, shown under What you owe. News: just to read.
 alter table public.announcements add column if not exists type text not null default 'News';
 
--- Active projects (Status In Production or Mixing & Mastering in Music Projects).
+-- Projects with Show in gryCE ticked in Music Projects.
 -- songs holds each song's name and Development Stage, worked out by the sync.
 -- Every linked member sees these.
 create table if not exists public.projects (

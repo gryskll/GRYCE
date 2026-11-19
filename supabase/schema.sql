@@ -339,7 +339,7 @@ grant all on public.funding_stages, public.funding_items, public.contributions t
 
 alter table public.announcements add column if not exists type text not null default 'News';
 
--- Active projects (Status In Production or Mixing & Mastering in Music Projects).
+-- Projects with Show in gryCE ticked in Music Projects.
 -- songs holds each song's name and Development Stage, worked out by the sync.
 -- Every linked member sees these.
 create table if not exists public.projects (

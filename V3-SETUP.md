@@ -44,4 +44,4 @@ Actions, Sync Notion to Supabase, Run workflow. The last line should include `fu
 **Notion: done November 19.**
 - Announcements has a **Type** field: Request or News. Requests show under What you owe. News, or blank, shows under Crew news.
 - Music Projects has a **gryCE Update** field. Whatever you type there shows at the top of that project in Project updates.
-- Project updates shows projects with Status In Production or Mixing & Mastering, with each song's Development Stage and the project's funding.
+- Project updates shows only projects with **Show in gryCE** ticked in Music Projects, with each song's Development Stage and the project's funding. McCain Chose Palin is ticked.
