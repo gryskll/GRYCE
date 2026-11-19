@@ -44,10 +44,37 @@ document.getElementById('sign-out').addEventListener('click', async () => {
   location.reload();
 });
 
+// GRYSKLL Creative Engine, where the C cycles through Creative, Community and
+// Collaborative. Screen readers get the plain name once. With reduced motion
+// turned on, it stays on Creative.
+const C_WORDS = ['reative', 'ommunity', 'ollaborative'];
+function productName() {
+  const word = el('span', { class: 'pn-word' }, C_WORDS[0]);
+  const node = el('p', { class: 'product-name' },
+    el('span', { class: 'sr-only' }, 'GRYSKLL Creative Engine'),
+    el('span', { 'aria-hidden': 'true' },
+      el('span', { class: 'pn-crew' }, 'GRYSKLL'), ' ',
+      el('span', { class: 'pn-c' }, 'C'), word, ' ',
+      el('span', { class: 'pn-c' }, 'E'), 'ngine'));
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let i = 0;
+    const timer = setInterval(() => {
+      if (!node.isConnected) return clearInterval(timer);
+      word.classList.add('out');
+      setTimeout(() => {
+        i = (i + 1) % C_WORDS.length;
+        word.textContent = C_WORDS[i];
+        word.classList.remove('out');
+      }, 350);
+    }, 2600);
+  }
+  return node;
+}
+
 function signInView(error) {
   show(el('section', { class: 'hero' },
     el('img', { class: 'signin-mark', src: 'img/skull-green.png', alt: 'GRYSKLL', width: '182', height: '256' }),
-    el('p', { class: 'eyebrow' }, 'GRYSKLL members'),
+    productName(),
     el('h1', {}, 'Don’t let it die on your hard drive.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),
     error && el('p', { class: 'error' }, error),
