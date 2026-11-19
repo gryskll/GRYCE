@@ -50,6 +50,7 @@ function signInView(error) {
     el('h1', {}, 'Your takes. Your catalog.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),
     error && el('p', { class: 'error' }, error),
+    el('p', { class: 'small muted' }, 'First time here? ', el('a', { href: 'help.html' }, 'Here’s how to get in.')),
     el('button', {
       class: 'primary', type: 'button',
       onclick: async (e) => {
@@ -67,7 +68,8 @@ function notLinkedView(email) {
   show(el('section', { class: 'card' },
     el('h1', {}, 'You’re signed in, but not linked yet'),
     el('p', {}, 'There’s no GRYSKLL artist record for ', el('strong', {}, email), '.'),
-    el('p', { class: 'muted' }, 'Send this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.')));
+    el('p', { class: 'muted' }, 'Text this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.'),
+    el('p', { class: 'small muted' }, 'gryCE is for GRYSKLL members right now. ', el('a', { href: 'help.html' }, 'How gryCE works'))));
 }
 
 // Member updates ----------------------------------------------------------
