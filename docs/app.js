@@ -261,9 +261,7 @@ function oweView(d) {
     o.openTakes.length > 0 && el('ul', { class: 'takes' }, o.openTakes.map(takeRow)),
     o.openTasks.length > 0 && el('h3', {}, 'Tasks'),
     o.openTasks.length > 0 && el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))),
-    o.docsToReview.length > 0 && el('h3', {}, 'Documents to review'),
-    o.docsToReview.length > 0 && el('p', { class: 'small muted' }, 'Submitted to Leadership. Open each one to review it.'),
-    o.docsToReview.length > 0 && el('ul', { class: 'takes' }, o.docsToReview.map(docRow)),
+    docGroups(o.docsToReview),
     submitted.length > 0 && el('h3', {}, 'Submitted, waiting on review'),
     submitted.length > 0 && el('ul', { class: 'takes' }, submitted.map(takeRow)),
     (accepted.length + doneTasks.length + o.requests.read.length) > 0 && el('details', {},
@@ -649,9 +647,11 @@ function isrcView(d) {
 
 // Leadership (Leadership only) ------------------------------------------------
 
-// Submitted = sent to Leadership and waiting on review.
+// Two kinds of document wait on Leadership:
+// Needs Input = a draft that wants everyone's input. Submitted = final, waiting on approval.
+const DOC_WAITING = ['Needs Input', 'Submitted'];
 const docsWaiting = (d) => (d.leadership?.documents ?? [])
-  .filter((x) => x.status === 'Submitted')
+  .filter((x) => DOC_WAITING.includes(x.status))
   .sort((a, b) => (a.date_submitted ?? '9999').localeCompare(b.date_submitted ?? '9999') || a.number.localeCompare(b.number));
 
 function docRow(x) {
@@ -668,6 +668,20 @@ function docRow(x) {
     x.notes && el('p', { class: 'take-notes' }, x.notes));
 }
 
+// Input needed first, then ready for approval. Used by What you owe and Leadership.
+function docGroups(list) {
+  const input = list.filter((x) => x.status === 'Needs Input');
+  const approve = list.filter((x) => x.status === 'Submitted');
+  return [
+    input.length > 0 && el('h3', {}, 'Documents: input needed'),
+    input.length > 0 && el('p', { class: 'small muted' }, 'Drafts that want your thoughts. Open each one and comment in the doc.'),
+    input.length > 0 && el('ul', { class: 'takes' }, input.map(docRow)),
+    approve.length > 0 && el('h3', {}, 'Documents: ready for approval'),
+    approve.length > 0 && el('p', { class: 'small muted' }, 'Final drafts submitted to Leadership under the Document Approval Policy.'),
+    approve.length > 0 && el('ul', { class: 'takes' }, approve.map(docRow)),
+  ];
+}
+
 function leadershipView(d) {
   const docs = [...(d.leadership?.documents ?? [])].sort((a, b) => a.number.localeCompare(b.number));
   const contribs = d.leadership?.contributions ?? [];
@@ -682,11 +696,11 @@ function leadershipView(d) {
   }
   const sum = (list, pred = () => true) => list.filter(pred).reduce((n, c) => n + (Number(c.amount) || 0), 0);
 
-  const rest = docs.filter((x) => x.status !== 'Submitted');
+  const rest = docs.filter((x) => !DOC_WAITING.includes(x.status));
   return [
-    panel('Waiting on your review', countTag(waiting, waiting > 0),
+    panel('Waiting on Leadership', countTag(waiting, waiting > 0),
       waiting
-        ? el('ul', { class: 'takes' }, toReview.map(docRow))
+        ? docGroups(toReview)
         : el('p', { class: 'muted' }, 'No documents waiting on Leadership.')),
     panel('Document registry', countTag(docs.length),
       rest.length
@@ -749,7 +763,7 @@ function homeView(d) {
     })(),
     me?.leadership && (() => {
       const waiting = docsWaiting(d).length;
-      return tile('leadership', 'Leadership', String(waiting), waiting ? (waiting === 1 ? 'Doc to review' : 'Docs to review') : 'Nothing to review', waiting ? 'hot' : null);
+      return tile('leadership', 'Leadership', String(waiting), waiting ? (waiting === 1 ? 'Doc waiting on you' : 'Docs waiting on you') : 'Nothing waiting', waiting ? 'hot' : null);
     })());
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');

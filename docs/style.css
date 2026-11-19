@@ -221,6 +221,7 @@ a.help-button:hover { text-decoration: none; }
 /* v0.4.1: ISRC codes, Leadership */
 .doc-approved { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .doc-submitted { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.doc-needs-input { color: #ff9f5a; border-color: #ff9f5a66; }
 .doc-draft { color: #7fb6ff; border-color: #7fb6ff66; }
 .update-form input[type="search"] { margin: 4px 0 8px; }
 .song .update { margin-top: 8px; }
