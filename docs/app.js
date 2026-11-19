@@ -732,7 +732,7 @@ function homeView(d) {
       return tile('leadership', 'Leadership', String(waiting), waiting ? 'Waiting on you' : 'Nothing waiting', waiting ? 'hot' : null);
     })());
 }
-const homeHelp = () => el('p', { class: 'small muted home-help' }, el('a', { href: '#help' }, 'How gryCE works'));
+const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
 
 const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
 const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership' };
@@ -763,7 +763,7 @@ function draw() {
   if (view) {
     show(el('nav', { class: 'crumbs' }, backLink(), el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
-    show(el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeView(current), homeHelp());
+    show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeHelp()), homeView(current));
   }
   window.scrollTo(0, 0);
 }
