@@ -322,7 +322,7 @@ for (const p of takePages) {
   const songId = (await relation(p, 'Song'))[0] ?? null;
   takes.push({
     id: p.id,
-    name: text(p.properties['Take']) ?? '(untitled take)',
+    name: titleOf(p) ?? '(untitled take)',  // the title property, whatever it's called
     song_id: songIds.has(songId) ? songId : null,
     artist_ids: (await relation(p, 'Artist')).filter((id) => artistIds.has(id)),
     type: select(p.properties['Type']),
@@ -478,6 +478,18 @@ const contributions = !CONTRIBUTIONS_DB ? null : await optional('contributions',
 
 // Project updates: projects with Show in gryCE ticked, with each song's stage, read from the songs
 // already pulled above, so nothing else in Songs leaves Notion.
+// Each song also lists who still owes something on it (open takes), so the
+// whole crew can see what's holding a project up. Names and the kind of take
+// only. Notes and due dates stay with the person who owes it.
+const OPEN_TAKE = ['Owed', 'Needs Decision'];
+const owedBySong = new Map();
+for (const t of takes) {
+  if (!t.song_id || (t.status && !OPEN_TAKE.includes(t.status))) continue;
+  for (const a of t.artist_ids) {
+    if (!owedBySong.has(t.song_id)) owedBySong.set(t.song_id, []);
+    owedBySong.get(t.song_id).push({ who: artistName.get(a) ?? 'Someone', what: t.type ?? 'Take' });
+  }
+}
 const songStageByProject = new Map();
 for (const p of songPages) {
   for (const projectId of await relation(p, 'Project')) {
@@ -485,6 +497,7 @@ for (const p of songPages) {
     songStageByProject.get(projectId).push({
       name: text(p.properties['Name']) ?? '(untitled)',
       stage: select(p.properties['Development Stage']),
+      owed: owedBySong.get(p.id) ?? [],
     });
   }
 }

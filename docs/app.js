@@ -387,6 +387,28 @@ function songsBlock(songs) {
         el('div', { class: 'song-meta' }, s.stage && el('span', { class: `tag dev-${slug(s.stage)}` }, s.stage)))))));
 }
 
+// Who still owes what on this project, grouped by person. Everyone sees it.
+function outstandingBlock(songs) {
+  const byWho = new Map();
+  for (const s of songs ?? []) {
+    for (const o of s.owed ?? []) {
+      if (!byWho.has(o.who)) byWho.set(o.who, []);
+      byWho.get(o.who).push(`${o.what}, ${s.name}`);
+    }
+  }
+  if (byWho.size === 0) return null;
+  const total = [...byWho.values()].reduce((n, l) => n + l.length, 0);
+  const people = [...byWho].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  return el('div', { class: 'block' },
+    el('h3', {}, `Outstanding · ${total}`),
+    el('p', { class: 'small muted' }, 'What the project is still waiting on, from everyone.'),
+    el('ul', { class: 'takes' }, people.map(([who, list]) => el('li', { class: 'take' },
+      el('div', { class: 'take-main' },
+        el('span', { class: 'take-song' }, who),
+        el('span', { class: 'take-name' }, `${list.length} owed`)),
+      el('div', { class: 'take-meta' }, list.sort().map((x) => el('span', { class: 'tag status-owed' }, x)))))));
+}
+
 function projectsOf(d) {
   const ids = new Set([...d.projects.map((p) => p.id), ...d.stages.map((s) => s.project_id).filter(Boolean)]);
   return [...ids].map((id) => {
@@ -407,6 +429,7 @@ function projectsView(d) {
   return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'tag' }, p.status),
     p?.release_date && el('p', { class: 'release' }, `Release: ${new Date(`${p.release_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`),
     p?.summary && el('p', { class: 'ann-body' }, p.summary),
+    outstandingBlock(p?.songs),
     songsBlock(p?.songs),
     fundingBlock(stages, itemsByStage, d.contributions.filter((c) => c.project_id === id))));
 }
