@@ -241,3 +241,11 @@ a.help-button:hover { text-decoration: none; }
 /* v0.4.6: developer credit */
 .foot .credit { flex-basis: 100%; text-align: center; color: var(--muted); font-size: 12px; }
 .foot .credit a { color: var(--text); }
+
+/* v0.4.7: contributions by project, stage and type */
+.contrib-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.contrib-head h3, .contrib-head h4 { margin-bottom: 6px; }
+.contrib-stage { margin-top: 14px; padding-left: 12px; border-left: 2px solid var(--line); }
+.contrib-stage h4 { margin: 0 0 6px; font-size: 15px; }
+.contrib-type { margin-top: 10px; }
+.contrib-type .takes { margin-top: 6px; }
