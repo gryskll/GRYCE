@@ -60,12 +60,23 @@ const HELP = `
       <p><strong>In the works</strong> lists songs you're on that aren't out yet, with their stage and target date. Songs where you still owe a take are at the top.</p>
     </section>
 <section class="card">
+      <h2>ISRC codes</h2>
+      <p>ISRC Admins get an <strong>ISRC codes</strong> tile. It lists every song without a code. Tap <strong>Issue code</strong>, pick Original for a first release or Reissue for a song GRYSKLL is putting out again, then <strong>Issue</strong>.</p>
+      <p>gryCE picks the next number, so two people can never get the same code. The code shows right away with a Copy button, and it lands on the song in GRYSKLL's records within 30 minutes. A code can never be reused, so check the song before you tap Issue.</p>
+    </section>
+<section class="card">
+      <h2>Leadership</h2>
+      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile with the document registry (every GRY-DOC number, its status and a link) and every member's project contributions.</p>
+    </section>
+<section class="card">
       <h2>Who sees what</h2>
       <ul>
         <li>Only GRYSKLL members who are linked can see anything. A login that isn't linked sees nothing.</li>
-        <li>Your own page is yours. Other members don't see your What you owe list or how much you've put into a project.</li>
+        <li>Your own page is yours. Other members don't see your What you owe list. How much you've put into a project is only seen by you and the Leadership Team.</li>
         <li>Takes still owed on an active project do show in that project's Outstanding list, by name.</li>
         <li>Everyone sees crew news, crew tasks, each project's Outstanding list, and funding stages with dollar amounts.</li>
+        <li>The Leadership Team also sees everyone's contributions and the document registry.</li>
+        <li>ISRC Admins also see every song's ISRC codes.</li>
         <li>Nobody can see your email address through gryCE.</li>
       </ul>
     </section>

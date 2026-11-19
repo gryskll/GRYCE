@@ -525,6 +525,175 @@ function discographyView(d) {
       : el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'));
 }
 
+// ISRC codes (ISRC Admins only) -----------------------------------------------
+// Admins see every song. Issuing goes through issue_isrc() in Supabase, which
+// picks the next number and refuses duplicates. The sync writes it to Notion.
+
+const isrcOf = (s) => s.isrc || s.isrc_reissue;
+
+function copyButton(value) {
+  return el('button', {
+    class: 'link', type: 'button',
+    onclick: async (e) => {
+      try { await navigator.clipboard.writeText(value); e.currentTarget.textContent = 'Copied'; } catch { /* clipboard blocked */ }
+    },
+  }, 'Copy');
+}
+
+function issueControl(song) {
+  const box = el('div', { class: 'update' });
+  const closed = () => box.replaceChildren(
+    el('button', { class: 'ghost', type: 'button', onclick: open }, 'Issue code'));
+  function open() {
+    let kind = 'Original';
+    const msg = el('p', { class: 'error small', hidden: true });
+    const btnOrig = el('button', { class: 'seg on', type: 'button', 'aria-pressed': 'true' }, 'Original');
+    const btnRe = el('button', { class: 'seg', type: 'button', 'aria-pressed': 'false' }, 'Reissue');
+    const pick = (k) => {
+      kind = k;
+      btnOrig.classList.toggle('on', k === 'Original');
+      btnRe.classList.toggle('on', k === 'Reissue');
+      btnOrig.setAttribute('aria-pressed', String(k === 'Original'));
+      btnRe.setAttribute('aria-pressed', String(k === 'Reissue'));
+    };
+    btnOrig.addEventListener('click', () => pick('Original'));
+    btnRe.addEventListener('click', () => pick('Reissue'));
+    const go = el('button', { class: 'primary small', type: 'button' }, 'Issue');
+    go.addEventListener('click', async () => {
+      go.disabled = true;
+      const { data, error } = await supabase.rpc('issue_isrc', { p_song_id: song.id, p_kind: kind });
+      if (error) {
+        go.disabled = false;
+        msg.textContent = `Couldn’t issue a code: ${error.message}`;
+        msg.hidden = false;
+        return;
+      }
+      box.replaceChildren(el('p', { class: 'pending small' },
+        el('strong', {}, data), ` issued. It reaches Notion within 30 minutes. `, copyButton(data)));
+      loadIsrc().then(draw);
+    });
+    box.replaceChildren(el('div', { class: 'update-form' },
+      el('p', { class: 'small muted' }, 'Original for a first release. Reissue for a song GRYSKLL is putting out again. A code can never be reused.'),
+      el('div', { class: 'segs', role: 'group', 'aria-label': 'Code type' }, btnOrig, btnRe),
+      msg,
+      el('div', { class: 'row' }, go, el('button', { class: 'link', type: 'button', onclick: closed }, 'Cancel'))));
+  }
+  closed();
+  return box;
+}
+
+function codeStatus(c) {
+  if (!c) return null;
+  if (c.pushed_at) return el('span', { class: 'tag status-accepted' }, 'In Notion');
+  if (c.push_attempts >= 5) return el('span', { class: 'tag status-owed', title: c.push_error ?? '' }, 'Didn’t reach Notion');
+  return el('span', { class: 'tag status-submitted' }, 'Going to Notion');
+}
+
+function isrcView(d) {
+  const songs = d.isrc?.songs ?? [];
+  const codes = d.isrc?.codes ?? [];
+  const bySong = new Map();
+  for (const c of codes) {
+    if (!bySong.has(c.song_id)) bySong.set(c.song_id, []);
+    bySong.get(c.song_id).push(c);
+  }
+  const issuedHere = codes.filter((c) => c.issued_by).sort((a, b) => b.issued_at.localeCompare(a.issued_at)).slice(0, 10);
+  const nameOf = new Map(songs.map((s) => [s.id, s.name]));
+  // A song counts as coded if Notion has a code or one was just issued here.
+  const coded = (s) => isrcOf(s) || bySong.has(s.id);
+  const without = songs.filter((s) => !coded(s)).sort((a, b) => a.name.localeCompare(b.name));
+  const withCode = songs.filter(coded).sort((a, b) => (isrcOf(a) ?? '').localeCompare(isrcOf(b) ?? ''));
+
+  const search = el('input', { type: 'search', placeholder: 'Find a song', 'aria-label': 'Find a song' });
+  const list = el('ul', { class: 'songs' });
+  const drawList = () => {
+    const q = search.value.trim().toLowerCase();
+    const shown = without.filter((s) => !q || s.name.toLowerCase().includes(q));
+    list.replaceChildren(...(shown.length ? shown.map((s) => el('li', { class: 'song' },
+      el('div', { class: 'song-main' }, el('span', {}, s.name)),
+      el('div', { class: 'song-meta' },
+        s.development_stage && el('span', { class: `tag dev-${slug(s.development_stage)}` }, s.development_stage),
+        isReleased(s) && s.development_stage !== 'Released' && el('span', { class: 'tag dev-released' }, 'Out now')),
+      issueControl(s))) : [el('li', { class: 'muted' }, q ? 'No match.' : 'Every song has a code.')]));
+  };
+  search.addEventListener('input', drawList);
+  drawList();
+
+  return [
+    issuedHere.length > 0 && panel('Issued in gryCE', null,
+      el('ul', { class: 'takes' }, issuedHere.map((c) => el('li', { class: 'take' },
+        el('div', { class: 'take-main' },
+          el('span', { class: 'take-song' }, c.code),
+          el('span', { class: 'take-name' }, nameOf.get(c.song_id) ?? 'Song')),
+        el('div', { class: 'take-meta' }, el('span', { class: 'tag' }, c.kind), codeStatus(c), copyButton(c.code)))))),
+    panel('Songs without a code', countTag(without.length),
+      el('p', { class: 'small muted' }, 'Codes run QT-3ZB-YY-NNNNN and pick up from the last number used this year.'),
+      el('div', { class: 'update-form' }, search),
+      list),
+    panel('Songs with a code', countTag(withCode.length),
+      el('details', {},
+        el('summary', {}, 'Show all'),
+        el('ul', { class: 'songs' }, withCode.map((s) => el('li', { class: 'song' },
+          el('div', { class: 'song-main' }, el('span', {}, s.name)),
+          el('div', { class: 'song-meta' },
+            s.isrc && el('span', { class: 'tag' }, `Original ${s.isrc}`),
+            s.isrc_reissue && el('span', { class: 'tag' }, `Reissue ${s.isrc_reissue}`),
+            (bySong.get(s.id) ?? []).filter((c) => !c.pushed_at).flatMap((c) => [el('span', { class: 'tag' }, `${c.kind} ${c.code}`), codeStatus(c)]))))))),
+  ];
+}
+
+// Leadership (Leadership only) ------------------------------------------------
+
+function leadershipView(d) {
+  const docs = [...(d.leadership?.documents ?? [])].sort((a, b) => a.number.localeCompare(b.number));
+  const contribs = d.leadership?.contributions ?? [];
+  const waiting = docs.filter((x) => x.status === 'Submitted').length;
+
+  const byProject = new Map();
+  for (const c of contribs) {
+    const key = c.project_name ?? 'No project';
+    if (!byProject.has(key)) byProject.set(key, []);
+    byProject.get(key).push(c);
+  }
+  const sum = (list, pred = () => true) => list.filter(pred).reduce((n, c) => n + (Number(c.amount) || 0), 0);
+
+  return [
+    panel('Document registry', waiting ? countTag(waiting, true) : countTag(docs.length),
+      waiting > 0 && el('p', { class: 'small muted' }, `${waiting} waiting on Leadership.`),
+      docs.length
+        ? el('ul', { class: 'takes' }, docs.map((x) => {
+          const link = safeUrl(x.link);
+          return el('li', { class: 'take' },
+            el('div', { class: 'take-main' },
+              el('span', { class: 'take-song' }, x.number),
+              link ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'take-name' }, x.name ?? 'Open') : el('span', { class: 'take-name' }, x.name ?? '')),
+            el('div', { class: 'take-meta' },
+              x.status && el('span', { class: `tag doc-${slug(x.status)}` }, x.status),
+              x.date_submitted && el('span', { class: 'muted' }, `Submitted ${fmtDate(x.date_submitted)}`),
+              x.date_approved && el('span', { class: 'muted' }, `Approved ${fmtDate(x.date_approved)}`)),
+            x.notes && el('p', { class: 'take-notes' }, x.notes));
+        }))
+        : el('p', { class: 'muted' }, 'Nothing in the registry yet.')),
+    panel('Contributions', countTag(contribs.length),
+      el('p', { class: 'small muted' }, 'Everyone’s contributions. Only Leadership sees this. Members see only their own.'),
+      contribs.length === 0 && el('p', { class: 'muted' }, 'No contributions yet.'),
+      [...byProject].map(([project, list]) => el('div', { class: 'block' },
+        el('h3', {}, project),
+        el('p', { class: 'small' },
+          `${money(sum(list))} in. `,
+          `${money(sum(list, (c) => c.repayment === 'Owed'))} still owed back.`),
+        el('ul', { class: 'takes' }, list.map((c) => el('li', { class: 'take' },
+          el('div', { class: 'take-main' },
+            el('span', { class: 'take-song' }, c.artist_name ?? c.type ?? 'Unlinked'),
+            el('span', { class: 'take-name' }, c.amount != null ? money(c.amount) : 'Amount pending')),
+          el('div', { class: 'take-meta' },
+            c.type && el('span', { class: 'tag' }, c.type),
+            c.repayment && el('span', { class: `tag ${c.repayment === 'Owed' ? 'status-owed' : c.repayment === 'Repaid' ? 'status-accepted' : ''}` }, c.repayment),
+            c.stage_name && el('span', { class: 'muted' }, c.stage_name),
+            c.contributed_on && el('span', { class: 'muted' }, fmtDate(c.contributed_on))))))))),
+  ];
+}
+
 // Home tiles ------------------------------------------------------------------
 
 function tile(hash, title, count, sub, state) {
@@ -551,12 +720,24 @@ function homeView(d) {
     tile('projects', 'Project updates', String(projects.length),
       projects.length === 1 ? projects[0].name : projects.length ? 'Active projects' : 'None active'),
     tile('works', 'In the works', String(working), working === 1 ? 'Song' : 'Songs'),
-    tile('discography', 'Discography', String(released), 'Released'));
+    tile('discography', 'Discography', String(released), 'Released'),
+    me?.isrc_admin && (() => {
+      const songs = d.isrc?.songs ?? [];
+      const codedIds = new Set((d.isrc?.codes ?? []).map((c) => c.song_id));
+      const open = songs.filter((s) => !isrcOf(s) && !codedIds.has(s.id)).length;
+      return tile('isrc', 'ISRC codes', String(open), open === 1 ? 'Song without a code' : 'Songs without a code');
+    })(),
+    me?.leadership && (() => {
+      const waiting = (d.leadership?.documents ?? []).filter((x) => x.status === 'Submitted').length;
+      return tile('leadership', 'Leadership', String(waiting), waiting ? 'Waiting on you' : 'Nothing waiting', waiting ? 'hot' : null);
+    })());
 }
 const homeHelp = () => el('p', { class: 'small muted home-help' }, el('a', { href: '#help' }, 'How gryCE works'));
 
-const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView };
-const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help' };
+const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership' };
+// Sections only some members get. Anyone else who types the address lands on Home.
+const allowed = (key) => (key === 'isrc' ? me?.isrc_admin : key === 'leadership' ? me?.leadership : true);
 
 // Main --------------------------------------------------------------------
 
@@ -577,9 +758,9 @@ async function optionalRows(query, label) {
 
 function draw() {
   if (!current) return;
-  const view = VIEWS[location.hash.slice(1)];
+  const key = location.hash.slice(1);
+  const view = allowed(key) ? VIEWS[key] : null;
   if (view) {
-    const key = location.hash.slice(1);
     show(el('nav', { class: 'crumbs' }, backLink(), el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
     show(el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeView(current), homeHelp());
@@ -587,6 +768,25 @@ function draw() {
   window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', draw);
+
+// Extra data for ISRC Admins and Leadership. The database decides what comes
+// back, so these only fill in for the right people.
+async function loadIsrc() {
+  if (!me?.isrc_admin || !current) return;
+  const [songs, codes] = await Promise.all([
+    optionalRows(supabase.from('songs').select('id, name, development_stage, status, isrc, isrc_reissue'), 'ISRC songs'),
+    optionalRows(supabase.from('isrc_codes').select('code, song_id, kind, issued_by, issued_at, pushed_at, push_attempts, push_error'), 'ISRC codes'),
+  ]);
+  current.isrc = { songs, codes };
+}
+async function loadLeadership() {
+  if (!me?.leadership || !current) return;
+  const [documents, contributions] = await Promise.all([
+    optionalRows(supabase.from('documents').select('id, number, name, status, date_submitted, date_approved, link, notes'), 'documents'),
+    optionalRows(supabase.rpc('leadership_contributions'), 'all contributions'),
+  ]);
+  current.leadership = { documents, contributions };
+}
 
 async function refresh() {
   const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects] = await Promise.all([
@@ -614,6 +814,7 @@ async function refresh() {
     takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects,
     songs: collectSongs(creditsRes.data, takesRes.data),
   };
+  await Promise.all([loadIsrc(), loadLeadership()]);
   const y = window.scrollY;
   draw();
   window.scrollTo(0, y);
@@ -623,7 +824,12 @@ async function render(session) {
   if (!session) return signInView();
 
   const email = session.user.email;
-  const { data, error: meErr } = await supabase.from('artists').select('id, name').maybeSingle();
+  // Leadership and ISRC Admin come with v0.4.1. Before its SQL runs, those columns
+  // don't exist, so fall back to the basics.
+  let { data, error: meErr } = await supabase.from('artists').select('id, name, leadership, isrc_admin').maybeSingle();
+  if (meErr && /column/i.test(meErr.message)) {
+    ({ data, error: meErr } = await supabase.from('artists').select('id, name').maybeSingle());
+  }
   if (meErr) return show(el('p', { class: 'error' }, `Couldn’t load your profile: ${meErr.message}`));
   if (!data) return notLinkedView(email);
   me = data;

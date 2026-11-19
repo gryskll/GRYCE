@@ -2,13 +2,14 @@
 // Runs in GitHub Actions on a schedule. No dependencies, Node 20+.
 //
 // Order on every run:
-//   1. Push: send members' pending updates (takes, tasks) to Notion. Needs NOTION_WRITE_TOKEN.
+//   1. Push: send members' pending updates (takes, tasks) and newly issued ISRC codes
+//      (Songs) to Notion. Needs NOTION_WRITE_TOKEN.
 //   2. Pull: copy Notion into Supabase and delete rows that are gone from Notion.
 //   3. Write back: put "Acknowledged by" on each announcement in Notion. Needs NOTION_WRITE_TOKEN.
 //
 // Env:
 //   NOTION_TOKEN         gryCE Sync connection token (read only)
-//   NOTION_WRITE_TOKEN   gryCE Write connection token (edit Takes, Tasks, Announcements). Optional.
+//   NOTION_WRITE_TOKEN   gryCE Write connection token (edit Takes, Tasks, Announcements, Songs). Optional.
 //   SUPABASE_URL         https://<project-ref>.supabase.co
 //   SUPABASE_SECRET_KEY  Supabase secret key (or legacy service_role key)
 
@@ -29,6 +30,14 @@ const ANNOUNCEMENTS_DB = '41d53193-34ad-8139-9ce5-000b2099252b';  // Announcemen
 const FUNDING_STAGES_DB = '41d53193-34ad-819d-a3ef-000bb5a64fa1';
 const FUNDING_ITEMS_DB = '41d53193-34ad-81fa-93b9-000be7187efe';
 const CONTRIBUTIONS_DB = '41d53193-34ad-8137-b9a0-000b9d0e3616';
+
+// v0.4.1 Leadership source. Lives on the GRYSCO Leadership page, outside the Music
+// Catalog. Share only this database with gryCE Sync, never the Leadership page.
+const DOCUMENTS_DB = '41d53193-34ad-810e-adb6-ebf842fdb041';     // Document Number Registry
+
+// ISRC fields on Songs, and the prefix gryCE issues codes under.
+const ISRC_PROPS = { Original: 'ISRC (Original)', Reissue: 'ISRC (GRYSKLL Reissue)' };
+const ISRC_PATTERN = /^QT-3ZB-\d{2}-\d{5}$/;
 const PROJECTS_DS = 'ecf53193-34ad-82f2-9fd6-07262bc135c1';   // Music Projects
 // Only projects with Show in gryCE ticked reach the crew.
 const SHOW_PROP = 'Show in gryCE';
@@ -184,6 +193,17 @@ async function upsert(table, rows, onConflict) {
   }
 }
 
+// Insert rows that aren't there yet. Never changes a row that already exists.
+async function insertNew(table, rows, onConflict) {
+  for (let i = 0; i < rows.length; i += 500) {
+    await sb(`${table}?on_conflict=${onConflict}`, {
+      method: 'POST',
+      body: rows.slice(i, i + 500),
+      prefer: 'resolution=ignore-duplicates,return=minimal',
+    });
+  }
+}
+
 const deleteStale = (table, runStart) =>
   sb(`${table}?synced_at=lt.${encodeURIComponent(runStart)}`, { method: 'DELETE', prefer: 'return=minimal' });
 
@@ -262,8 +282,57 @@ async function pushMemberUpdates() {
   return sent;
 }
 
+// ISRC codes issued in gryCE go onto the song in Notion, with a comment saying who issued it.
+// A song that already has a different code in that field is never overwritten.
+async function pushIsrcCodes() {
+  if (!NOTION_WRITE_TOKEN) return 0;
+  const pending = await sb(
+    'isrc_codes?pushed_at=is.null&issued_by=not.is.null&push_attempts=lt.5&order=issued_at.asc' +
+      '&select=code,song_id,kind,issued_by,push_attempts',
+  );
+  if (pending.length === 0) return 0;
+  const names = new Map((await sb('artists?select=id,name')).map((a) => [a.id, a.name]));
+  let sent = 0;
+  for (const c of pending) {
+    try {
+      const propName = ISRC_PROPS[c.kind];
+      const page = await notionWrite(`pages/${c.song_id}`);
+      const prop = page.properties[propName];
+      if (!prop || prop.type !== 'rich_text') throw new Error(`No "${propName}" text property on this song`);
+      const existing = text(prop);
+      if (existing && existing !== c.code) throw new Error(`Song already has ${existing} in ${propName}. Nothing changed.`);
+      if (existing !== c.code) {
+        await notionWrite(`pages/${c.song_id}`, {
+          method: 'PATCH',
+          body: { properties: { [propName]: { rich_text: [{ type: 'text', text: { content: c.code } }] } } },
+        });
+        const who = names.get(c.issued_by) ?? 'An ISRC Admin';
+        await notionWrite('comments', {
+          method: 'POST',
+          body: { parent: { page_id: c.song_id }, rich_text: [{ type: 'text', text: { content: `${who} issued ${c.kind.toLowerCase()} ISRC ${c.code} in gryCE.` } }] },
+        });
+      }
+      await sb(`isrc_codes?code=eq.${encodeURIComponent(c.code)}`, {
+        method: 'PATCH',
+        body: { pushed_at: new Date().toISOString(), push_error: null },
+        prefer: 'return=minimal',
+      });
+      sent++;
+    } catch (e) {
+      console.warn(`ISRC ${c.code} not written to Notion: ${e.message}`);
+      await sb(`isrc_codes?code=eq.${encodeURIComponent(c.code)}`, {
+        method: 'PATCH',
+        body: { push_attempts: c.push_attempts + 1, push_error: e.message.slice(0, 500) },
+        prefer: 'return=minimal',
+      });
+    }
+  }
+  return sent;
+}
+
 const runStart = new Date().toISOString();
 const pushed = (await optional('member updates push', pushMemberUpdates)) ?? 0;
+const isrcPushed = (await optional('ISRC push', pushIsrcCodes)) ?? 0;
 
 // 2. Pull ------------------------------------------------------------------
 
@@ -285,6 +354,9 @@ const artists = artistPages.map((p) => ({
   relation: select(p.properties['Artist Relation']),
   roles: multi(p.properties['Role']),
   email: p.properties['Email']?.email?.trim().toLowerCase() || null,
+  leadership: p.properties['Leadership']?.checkbox === true,
+  isrc_admin: p.properties['ISRC Admin']?.checkbox === true,
+  also_known_as: text(p.properties['Also Known As']),
   synced_at: runStart,
 }));
 const artistIds = new Set(artists.map((a) => a.id));
@@ -300,6 +372,8 @@ const songs = songPages.map((p) => ({
   target_release_date: date(p.properties['Target Release Date']),
   song_link: url(p.properties['Song Link']),
   bandcamp_link: url(p.properties['Bandcamp Link']),
+  isrc: text(p.properties[ISRC_PROPS.Original])?.toUpperCase() ?? null,
+  isrc_reissue: text(p.properties[ISRC_PROPS.Reissue])?.toUpperCase() ?? null,
   synced_at: runStart,
 }));
 const songIds = new Set(songs.map((s) => s.id));
@@ -516,11 +590,40 @@ const projects = !PROJECTS_DS ? null : await optional('projects', async () => {
   }));
 });
 
+// Document Number Registry, for Leadership.
+const documents = !DOCUMENTS_DB ? null : await optional('documents', async () => {
+  const pages = await queryAll(await dataSourceId(DOCUMENTS_DB));
+  return pages.map((p) => ({
+    id: p.id,
+    number: titleOf(p) ?? '(no number)',
+    name: text(p.properties['Document Name']),
+    status: select(p.properties['Status']),
+    date_submitted: date(p.properties['Date Submitted']),
+    date_approved: date(p.properties['Date Approved']),
+    link: url(p.properties['Current Revision']),
+    notes: text(p.properties['Notes']),
+    synced_at: runStart,
+  }));
+});
+
 // Parents first, then children. Stale rows go children first.
-await upsert('artists', artists, 'id');
-await upsert('songs', songs, 'id');
+await upsertNewCols('artists', artists, V041_ARTIST);
+await upsertNewCols('songs', songs, V041_SONG);
 await upsert('song_credits', credits, 'song_id,artist_id,role');
 await upsert('takes', takes, 'id');
+// v0.4.1 columns may not exist yet. If the first save fails, save again without them.
+const V041_ARTIST = ['leadership', 'isrc_admin', 'also_known_as'];
+const V041_SONG = ['isrc', 'isrc_reissue'];
+const without = (rows, keys) => rows.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => !keys.includes(k))));
+async function upsertNewCols(table, rows, cols) {
+  try {
+    await upsert(table, rows, 'id');
+  } catch (e) {
+    if (!/column|schema cache/i.test(e.message)) throw e;
+    console.warn(`${table}: v0.4.1 columns missing, saved without them. Run supabase/migrations/v4-1-isrc-leadership.sql.`);
+    await upsert(table, without(rows, cols), 'id');
+  }
+}
 // V2 tables may not exist yet in Supabase. A failed save skips that table's cleanup too.
 const tasksSaved = tasks && (await optional('tasks save', () => upsert('tasks', tasks, 'id').then(() => true)));
 const annSaved = announcements && (await optional('announcements save', () => upsert('announcements', announcements, 'id').then(() => true)));
@@ -531,6 +634,17 @@ const stagesSaved = await save('funding stages', 'funding_stages', fundingStages
 const itemsSaved = await save('funding items', 'funding_items', fundingItems);
 const contribSaved = await save('contributions', 'contributions', contributions);
 const projectsSaved = await save('projects', 'projects', projects);
+const docsSaved = await save('documents', 'documents', documents);
+
+// Every ISRC code already in Notion goes into isrc_codes, so new codes carry on
+// from the last number. Codes issued in gryCE are already there and stay as they are.
+const knownCodes = [];
+for (const s of songs) {
+  for (const [kind, code] of [['Original', s.isrc], ['Reissue', s.isrc_reissue]]) {
+    if (code && ISRC_PATTERN.test(code)) knownCodes.push({ code, song_id: s.id, kind, pushed_at: runStart });
+  }
+}
+const codesLoaded = await optional('ISRC codes', () => insertNew('isrc_codes', knownCodes, 'code').then(() => true));
 
 const staleTables = ['takes', 'song_credits', 'songs', 'artists'];
 if (tasksSaved) staleTables.unshift('tasks');
@@ -539,7 +653,8 @@ if (stagesSaved) staleTables.unshift('funding_stages');
 if (itemsSaved) staleTables.unshift('funding_items');
 if (contribSaved) staleTables.unshift('contributions');
 if (projectsSaved) staleTables.unshift('projects');
-// announcement_acks and member_updates are never in this list.
+if (docsSaved) staleTables.unshift('documents');
+// announcement_acks, member_updates and isrc_codes are never in this list.
 for (const t of staleTables) await deleteStale(t, runStart);
 
 // 3. Write back "Acknowledged by" ------------------------------------------
@@ -577,7 +692,10 @@ console.log(
     (itemsSaved ? `, ${fundingItems.length} funding items` : '') +
     (contribSaved ? `, ${contributions.length} contributions` : '') +
     (projectsSaved ? `, ${projects.length} projects` : '') +
+    (docsSaved ? `, ${documents.length} documents` : '') +
+    (codesLoaded ? `, ${knownCodes.length} ISRC codes` : '') +
     `. Pushed ${pushed} member updates` +
+    (isrcPushed ? `, wrote ${isrcPushed} new ISRC codes to Notion` : '') +
     (ackUpdates ? `, updated Acknowledged by on ${ackUpdates}` : '') +
     '.',
 );
