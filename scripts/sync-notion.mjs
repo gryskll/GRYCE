@@ -29,6 +29,8 @@ const ANNOUNCEMENTS_DB = '41d53193-34ad-8139-9ce5-000b2099252b';  // Announcemen
 const FUNDING_STAGES_DB = '41d53193-34ad-819d-a3ef-000bb5a64fa1';
 const FUNDING_ITEMS_DB = '41d53193-34ad-81fa-93b9-000be7187efe';
 const CONTRIBUTIONS_DB = '41d53193-34ad-8137-b9a0-000b9d0e3616';
+const PROJECTS_DS = 'ecf53193-34ad-82f2-9fd6-07262bc135c1';   // Music Projects
+const ACTIVE_PROJECT_STATUSES = ['In Production', 'Mixing & Mastering'];
 
 // Notion property names. Change these if the Notion names differ.
 const TAKE_PROPS = { status: 'Status', submitted: 'Submitted', accepted: 'Accepted' };
@@ -36,7 +38,7 @@ const TAKE_PROPS = { status: 'Status', submitted: 'Submitted', accepted: 'Accept
 const TASK_PROPS = { assignee: 'Assignee', owner: 'Owner', crewOwner: 'Crew', status: 'Status', done: 'Done', due: ['Due', 'Due Date', 'Due date', 'Date'] };
 const ANN_PROPS = {
   title: 'Title', body: 'Body', audience: 'Audience', project: 'Project', artists: 'Artists',
-  publish: 'Publish date', expires: 'Expires', ackedBy: 'Acknowledged by',
+  publish: 'Publish date', expires: 'Expires', ackedBy: 'Acknowledged by', type: 'Type',
 };
 
 // Songs relation property -> credit role stored in Supabase
@@ -398,6 +400,7 @@ const announcements = !ANNOUNCEMENTS_DB ? null : await optional('announcements',
       title: text(props[ANN_PROPS.title]) ?? titleOf(p) ?? '(untitled)',
       body: text(props[ANN_PROPS.body]),
       audience,
+      type: select(props[ANN_PROPS.type]) === 'Request' ? 'Request' : 'News',
       project_id: projectId,
       audience_artist_ids: ids.filter((id) => artistIds.has(id)),
       publish_date: date(props[ANN_PROPS.publish]),
@@ -472,6 +475,33 @@ const contributions = !CONTRIBUTIONS_DB ? null : await optional('contributions',
   return rows;
 });
 
+// Project updates: active projects with each song's stage, read from the songs
+// already pulled above, so nothing else in Songs leaves Notion.
+const songStageByProject = new Map();
+for (const p of songPages) {
+  for (const projectId of await relation(p, 'Project')) {
+    if (!songStageByProject.has(projectId)) songStageByProject.set(projectId, []);
+    songStageByProject.get(projectId).push({
+      name: text(p.properties['Name']) ?? '(untitled)',
+      stage: select(p.properties['Development Stage']),
+    });
+  }
+}
+const projects = !PROJECTS_DS ? null : await optional('projects', async () => {
+  const pages = await queryAll(PROJECTS_DS, {
+    or: ACTIVE_PROJECT_STATUSES.map((name) => ({ property: 'Status', select: { equals: name } })),
+  });
+  return pages.map((p) => ({
+    id: p.id,
+    name: titleOf(p) ?? '(untitled project)',
+    status: select(p.properties['Status']),
+    release_date: date(p.properties['Release Date']),
+    summary: text(p.properties['gryCE Update']),
+    songs: songStageByProject.get(p.id) ?? [],
+    synced_at: runStart,
+  }));
+});
+
 // Parents first, then children. Stale rows go children first.
 await upsert('artists', artists, 'id');
 await upsert('songs', songs, 'id');
@@ -486,6 +516,7 @@ const save = (label, table, rows) =>
 const stagesSaved = await save('funding stages', 'funding_stages', fundingStages);
 const itemsSaved = await save('funding items', 'funding_items', fundingItems);
 const contribSaved = await save('contributions', 'contributions', contributions);
+const projectsSaved = await save('projects', 'projects', projects);
 
 const staleTables = ['takes', 'song_credits', 'songs', 'artists'];
 if (tasksSaved) staleTables.unshift('tasks');
@@ -493,6 +524,7 @@ if (annSaved) staleTables.unshift('announcements');
 if (stagesSaved) staleTables.unshift('funding_stages');
 if (itemsSaved) staleTables.unshift('funding_items');
 if (contribSaved) staleTables.unshift('contributions');
+if (projectsSaved) staleTables.unshift('projects');
 // announcement_acks and member_updates are never in this list.
 for (const t of staleTables) await deleteStale(t, runStart);
 
@@ -530,6 +562,7 @@ console.log(
     (stagesSaved ? `, ${fundingStages.length} funding stages` : '') +
     (itemsSaved ? `, ${fundingItems.length} funding items` : '') +
     (contribSaved ? `, ${contributions.length} contributions` : '') +
+    (projectsSaved ? `, ${projects.length} projects` : '') +
     `. Pushed ${pushed} member updates` +
     (ackUpdates ? `, updated Acknowledged by on ${ackUpdates}` : '') +
     '.',

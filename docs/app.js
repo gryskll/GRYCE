@@ -21,31 +21,6 @@ function el(tag, attrs = {}, ...children) {
 // Empty sections come back as null. Drop them, or the page prints "null".
 const show = (...nodes) => app.replaceChildren(...nodes.flat().filter((n) => n != null && n !== false));
 
-// Cards open and close with a tap on their header. Each member's choice is
-// remembered in this browser. Storage can be missing or blocked, so it's optional.
-const openState = (() => {
-  try { return JSON.parse(localStorage.getItem('gryce.open') || '{}'); } catch { return {}; }
-})();
-function saveOpen() {
-  try { localStorage.setItem('gryce.open', JSON.stringify(openState)); } catch { /* not saved, still works */ }
-}
-function card(id, { title, badge, attention = false, open = false }, ...body) {
-  const isOpen = openState[id] ?? open;
-  const content = el('div', { class: 'card-body', id: `body-${id}`, hidden: !isOpen }, ...body);
-  const toggle = el('button', {
-    class: 'card-toggle', type: 'button', 'aria-expanded': String(isOpen), 'aria-controls': `body-${id}`,
-    onclick: () => {
-      const nowOpen = content.hidden;
-      content.hidden = !nowOpen;
-      toggle.setAttribute('aria-expanded', String(nowOpen));
-      openState[id] = nowOpen;
-      saveOpen();
-    },
-  },
-    el('span', { class: 'card-title' }, title),
-    el('span', { class: 'card-side' }, badge, el('span', { class: 'chev', 'aria-hidden': 'true' })));
-  return el('section', { class: attention ? 'card attention' : 'card' }, el('h2', { class: 'card-head' }, toggle), content);
-}
 const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : null);
 const fmtDate = (d) =>
   d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
@@ -162,14 +137,31 @@ function updateForm(kind, id, newStatus, { askLink }) {
   return box;
 }
 
-// Announcements -----------------------------------------------------------
+// Layout ------------------------------------------------------------------
+// Home is a grid of square tiles. A tile opens its section full screen, and the
+// section's address (#owe, #news, ...) means the phone's back button works.
 
-function announcementCard(a, acked) {
+function panel(title, badge, ...body) {
+  return el('section', { class: 'card' },
+    el('div', { class: 'card-head' }, el('h2', {}, title), badge),
+    ...body);
+}
+const countTag = (n, hot) => el('span', { class: hot ? 'count hot' : 'count' }, String(n));
+const backLink = () => el('a', { class: 'back', href: '#' }, '‹ All sections');
+
+// Announcements -----------------------------------------------------------
+// Type Request = something members owe (shown under What you owe).
+// Type News, or blank = just to read (shown under Crew news).
+
+const isRequest = (a) => a.type === 'Request';
+
+function announcementRow(a, acked) {
   const msg = el('p', { class: 'error small', hidden: true });
-  return el('li', { class: acked ? 'announcement read' : 'announcement' },
+  return el('li', { class: acked ? 'take announcement read' : 'take announcement' },
     el('div', { class: 'take-main' },
       el('span', { class: 'take-song' }, a.title),
       a.publish_date && el('span', { class: 'take-name' }, fmtDate(a.publish_date))),
+    isRequest(a) && el('div', { class: 'take-meta' }, el('span', { class: 'tag status-owed' }, 'Request')),
     a.body && el('p', { class: 'ann-body' }, a.body),
     acked
       ? el('p', { class: 'small muted' }, `Acknowledged ${fmtDate(acked.acknowledged_at)}`)
@@ -191,32 +183,18 @@ function announcementCard(a, acked) {
     msg);
 }
 
-function announcementsSection(announcements, acks) {
-  if (announcements.length === 0) return null;
-  const ackBy = new Map(acks.map((k) => [k.announcement_id, k]));
-  const sorted = [...announcements].sort((a, b) => (b.publish_date ?? '').localeCompare(a.publish_date ?? ''));
-  const unread = sorted.filter((a) => !ackBy.has(a.id));
-  const read = sorted.filter((a) => ackBy.has(a.id));
-  // Unread news always opens, whatever was chosen last time.
-  if (unread.length) delete openState.news;
-  return card('news', {
-    title: 'Crew news',
-    badge: unread.length > 0 && el('span', { class: 'count hot' }, String(unread.length)),
-    attention: unread.length > 0,
-    open: unread.length > 0,
-  },
-    unread.length
-      ? el('ul', { class: 'takes' }, unread.map((a) => announcementCard(a, null)))
-      : el('p', { class: 'muted' }, 'You’re caught up.'),
-    read.length > 0 && el('details', {},
-      el('summary', {}, `Read (${read.length})`),
-      el('ul', { class: 'takes' }, read.map((a) => announcementCard(a, ackBy.get(a.id))))));
+function splitRead(list, ackBy) {
+  const sorted = [...list].sort((a, b) => (b.publish_date ?? '').localeCompare(a.publish_date ?? ''));
+  return { unread: sorted.filter((a) => !ackBy.has(a.id)), read: sorted.filter((a) => ackBy.has(a.id)) };
 }
 
-// Takes -------------------------------------------------------------------
+// Takes and tasks -----------------------------------------------------------
 
 const OPEN = ['Owed', 'Needs Decision'];
 const isOpenTake = (t) => !t.status || OPEN.includes(t.status);
+const TASK_DONE = ['Done', 'Complete', 'Completed', 'Archived', 'Canceled', 'Cancelled'];
+const isOpenTask = (k) => !TASK_DONE.includes(k.status);
+const byDue = (a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || a.name.localeCompare(b.name);
 
 function takeRow(t) {
   const due = fmtDate(t.due_date);
@@ -235,31 +213,6 @@ function takeRow(t) {
     isOpenTake(t) && !pending && updateForm('take', t.id, 'Submitted', { askLink: true }));
 }
 
-function takesSection(takes) {
-  const open = takes.filter(isOpenTake);
-  const submitted = takes.filter((t) => t.status === 'Submitted');
-  const done = takes.filter((t) => t.status === 'Accepted');
-
-  return card('owe', {
-    title: 'What you owe',
-    badge: el('span', { class: 'count' }, String(open.length)),
-    open: open.length > 0,
-  },
-    open.length
-      ? el('ul', { class: 'takes' }, open.map(takeRow))
-      : el('p', { class: 'muted' }, 'Nothing owed right now.'),
-    submitted.length > 0 && el('h3', {}, 'Submitted, waiting on review'),
-    submitted.length > 0 && el('ul', { class: 'takes' }, submitted.map(takeRow)),
-    done.length > 0 && el('details', {},
-      el('summary', {}, `Accepted (${done.length})`),
-      el('ul', { class: 'takes' }, done.map(takeRow))));
-}
-
-// Tasks -------------------------------------------------------------------
-
-const TASK_DONE = ['Done', 'Complete', 'Completed', 'Archived', 'Canceled', 'Cancelled'];
-const isOpenTask = (k) => !TASK_DONE.includes(k.status);
-
 function taskRow(k, mine) {
   const due = fmtDate(k.due_date);
   const overdue = isOpenTask(k) && isPast(k.due_date);
@@ -275,32 +228,75 @@ function taskRow(k, mine) {
     mine && isOpenTask(k) && !pending && updateForm('task', k.id, 'Done', { askLink: true }));
 }
 
-function tasksSection(tasks, meId) {
-  if (tasks.length === 0) return null;
-  const mineOf = (k) => (k.assignee_ids ?? []).includes(meId);
-  const byDue = (a, b) => (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999') || a.name.localeCompare(b.name);
-  const mine = tasks.filter((k) => mineOf(k) && isOpenTask(k)).sort(byDue);
-  const crew = tasks.filter((k) => !mineOf(k) && isOpenTask(k)).sort(byDue);
-  const done = tasks.filter((k) => !isOpenTask(k));
-
-  return card('tasks', {
-    title: 'Your tasks',
-    badge: el('span', { class: 'count' }, String(mine.length)),
-    open: mine.length > 0,
-  },
-    mine.length
-      ? el('ul', { class: 'takes' }, mine.map((k) => taskRow(k, true)))
-      : el('p', { class: 'muted' }, 'No tasks on you right now.'),
-    crew.length > 0 && el('h3', {}, 'Crew tasks'),
-    crew.length > 0 && el('ul', { class: 'takes' }, crew.map((k) => taskRow(k, false))),
-    done.length > 0 && el('details', {},
-      el('summary', {}, `Done (${done.length})`),
-      el('ul', { class: 'takes' }, done.map((k) => taskRow(k, mineOf(k))))));
+// What you owe: requests, takes and your own tasks, in one place.
+function owed(d) {
+  const ackBy = new Map(d.acks.map((k) => [k.announcement_id, k]));
+  const requests = splitRead(d.announcements.filter(isRequest), ackBy);
+  const takes = d.takes;
+  const openTakes = takes.filter(isOpenTake);
+  const mine = d.tasks.filter((k) => (k.assignee_ids ?? []).includes(me.id));
+  const openTasks = mine.filter(isOpenTask).sort(byDue);
+  const overdue = openTakes.some((t) => t.status === 'Owed' && isPast(t.due_date))
+    || openTasks.some((k) => isPast(k.due_date));
+  return { ackBy, requests, takes, openTakes, mine, openTasks, overdue,
+    count: requests.unread.length + openTakes.length + openTasks.length };
 }
 
-// Funding -------------------------------------------------------------------
-// One card per project with funding stages. It shows the stage that's open now.
-// A stage's goal is the sum of its item quotes, so it grows as quotes come in.
+function oweView(d) {
+  const o = owed(d);
+  const submitted = o.takes.filter((t) => t.status === 'Submitted');
+  const accepted = o.takes.filter((t) => t.status === 'Accepted');
+  const doneTasks = o.mine.filter((k) => !isOpenTask(k));
+  return panel('What you owe', countTag(o.count, o.count > 0),
+    o.count === 0 && el('p', { class: 'muted' }, 'Nothing owed right now.'),
+    o.requests.unread.length > 0 && el('h3', {}, 'Requests'),
+    o.requests.unread.length > 0 && el('ul', { class: 'takes' }, o.requests.unread.map((a) => announcementRow(a, null))),
+    o.openTakes.length > 0 && el('h3', {}, 'Takes'),
+    o.openTakes.length > 0 && el('ul', { class: 'takes' }, o.openTakes.map(takeRow)),
+    o.openTasks.length > 0 && el('h3', {}, 'Tasks'),
+    o.openTasks.length > 0 && el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))),
+    submitted.length > 0 && el('h3', {}, 'Submitted, waiting on review'),
+    submitted.length > 0 && el('ul', { class: 'takes' }, submitted.map(takeRow)),
+    (accepted.length + doneTasks.length + o.requests.read.length) > 0 && el('details', {},
+      el('summary', {}, `Done (${accepted.length + doneTasks.length + o.requests.read.length})`),
+      el('ul', { class: 'takes' },
+        o.requests.read.map((a) => announcementRow(a, o.ackBy.get(a.id))),
+        accepted.map(takeRow),
+        doneTasks.map((k) => taskRow(k, true)))));
+}
+
+function newsView(d) {
+  const ackBy = new Map(d.acks.map((k) => [k.announcement_id, k]));
+  const { unread, read } = splitRead(d.announcements.filter((a) => !isRequest(a)), ackBy);
+  return panel('Crew news', unread.length > 0 && countTag(unread.length, true),
+    unread.length
+      ? el('ul', { class: 'takes' }, unread.map((a) => announcementRow(a, null)))
+      : el('p', { class: 'muted' }, 'You’re caught up.'),
+    read.length > 0 && el('details', {},
+      el('summary', {}, `Read (${read.length})`),
+      el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id))))));
+}
+
+const crewTasksOf = (d) => d.tasks.filter((k) => k.is_crew && !(k.assignee_ids ?? []).includes(me.id));
+
+function crewView(d) {
+  const crew = crewTasksOf(d);
+  const open = crew.filter(isOpenTask).sort(byDue);
+  const done = crew.filter((k) => !isOpenTask(k));
+  return panel('Crew tasks', countTag(open.length),
+    open.length
+      ? el('ul', { class: 'takes' }, open.map((k) => taskRow(k, false)))
+      : el('p', { class: 'muted' }, 'No crew tasks open right now.'),
+    done.length > 0 && el('details', {},
+      el('summary', {}, `Done (${done.length})`),
+      el('ul', { class: 'takes' }, done.map((k) => taskRow(k, false)))));
+}
+
+// Project updates: where each active project stands, songs and funding --------
+
+const STAGE_ORDER = ['Released', 'Release Ready', 'Mastering', 'Re-Mastering', 'Mixing', 'Mixing Prep',
+  'Recording', 'Arrangement', 'Songwriting', 'Pending Review', 'Idea/Concept', 'Artwork Needed'];
+const stageRank = (s) => { const i = STAGE_ORDER.indexOf(s); return i < 0 ? 99 : i; };
 
 const money = (n) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 2,
@@ -337,13 +333,12 @@ function moneyLine(stage, items) {
     waitText && el('p', { class: 'small muted' }, `${waitText} The goal goes up as they come in.`));
 }
 
-function owedLine(projectStages, itemsByStage, mine) {
-  const owed = mine.filter((c) => c.repayment === 'Owed');
-  if (owed.length === 0) return null;
-  const known = owed.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
-  const unknown = owed.filter((c) => c.amount == null).length;
-  const repayStage = projectStages.find((s) =>
-    (itemsByStage.get(s.id) ?? []).some((i) => /^repay/i.test(i.name)));
+function owedLine(stages, itemsByStage, mine) {
+  const owedRows = mine.filter((c) => c.repayment === 'Owed');
+  if (owedRows.length === 0) return null;
+  const known = owedRows.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const unknown = owedRows.filter((c) => c.amount == null).length;
+  const repayStage = stages.find((s) => (itemsByStage.get(s.id) ?? []).some((i) => /^repay/i.test(i.name)));
   return el('div', { class: 'owed' },
     el('p', {},
       'You’ve put in ', el('strong', {}, money(known)),
@@ -352,54 +347,71 @@ function owedLine(projectStages, itemsByStage, mine) {
       repayStage ? `It’s paid back at face value in ${stageLabel(repayStage)}.` : 'It’s paid back at face value.'));
 }
 
-function fundingSections(stages, items, contributions) {
+function fundingBlock(stages, itemsByStage, contributions) {
+  if (stages.length === 0) return null;
+  const list = [...stages].sort((a, b) => (a.stage_number ?? 99) - (b.stage_number ?? 99));
+  const current = list.find((s) => s.status === 'Underway') ?? list.find((s) => s.status !== 'Complete');
+  const currentItems = current ? itemsByStage.get(current.id) ?? [] : [];
+  return el('div', { class: 'block' },
+    el('h3', {}, current ? `Funding · Stage ${current.stage_number ?? ''} of ${list.length}, ${current.name}` : 'Funding · complete'),
+    current && moneyLine(current, currentItems),
+    currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow)),
+    owedLine(list, itemsByStage, contributions),
+    el('details', {},
+      el('summary', {}, `All funding stages (${list.length})`),
+      el('ul', { class: 'takes' }, list.map((s) => {
+        const its = itemsByStage.get(s.id) ?? [];
+        const goal = goalOf(its);
+        const raised = money(Number(s.raised) || 0);
+        return el('li', { class: 'take' },
+          el('div', { class: 'take-main' },
+            el('span', { class: 'take-song' }, stageLabel(s)),
+            el('span', { class: 'take-name' }, goal > 0 ? `${raised} of ${money(goal)}` : `${raised} raised`)),
+          el('div', { class: 'take-meta' }, s.status && el('span', { class: `tag stage-${slug(s.status)}` }, s.status)),
+          s.id !== current?.id && its.length > 0 && el('ul', { class: 'takes nested' }, its.map(itemRow)));
+      }))));
+}
+
+function songsBlock(songs) {
+  if (!songs?.length) return null;
+  const sorted = [...songs].sort((a, b) => stageRank(a.stage) - stageRank(b.stage) || a.name.localeCompare(b.name));
+  const counts = new Map();
+  for (const s of sorted) counts.set(s.stage ?? 'No stage', (counts.get(s.stage ?? 'No stage') ?? 0) + 1);
+  return el('div', { class: 'block' },
+    el('h3', {}, `Songs · ${songs.length}`),
+    el('div', { class: 'take-meta' }, [...counts].map(([stage, n]) => el('span', { class: `tag dev-${slug(stage)}` }, `${n} ${stage}`))),
+    el('details', {},
+      el('summary', {}, 'Song by song'),
+      el('ul', { class: 'songs' }, sorted.map((s) => el('li', { class: 'song' },
+        el('div', { class: 'song-main' }, el('span', {}, s.name)),
+        el('div', { class: 'song-meta' }, s.stage && el('span', { class: `tag dev-${slug(s.stage)}` }, s.stage)))))));
+}
+
+function projectsOf(d) {
+  const ids = new Set([...d.projects.map((p) => p.id), ...d.stages.map((s) => s.project_id).filter(Boolean)]);
+  return [...ids].map((id) => {
+    const p = d.projects.find((x) => x.id === id);
+    const stages = d.stages.filter((s) => s.project_id === id);
+    return { id, name: p?.name ?? stages[0]?.project_name ?? 'Project', p, stages };
+  }).sort((a, b) => (a.p?.release_date ?? '9999').localeCompare(b.p?.release_date ?? '9999'));
+}
+
+function projectsView(d) {
   const itemsByStage = new Map();
-  for (const i of items) {
+  for (const i of d.items) {
     if (!itemsByStage.has(i.stage_id)) itemsByStage.set(i.stage_id, []);
     itemsByStage.get(i.stage_id).push(i);
   }
-  const byProject = new Map();
-  for (const s of stages) {
-    const key = s.project_id ?? 'none';
-    if (!byProject.has(key)) byProject.set(key, []);
-    byProject.get(key).push(s);
-  }
-
-  const cards = [];
-  for (const [projectId, list] of byProject) {
-    list.sort((a, b) => (a.stage_number ?? 99) - (b.stage_number ?? 99));
-    const current = list.find((s) => s.status === 'Underway') ?? list.find((s) => s.status !== 'Complete');
-    if (!current) continue;
-    const currentItems = itemsByStage.get(current.id) ?? [];
-    const mine = contributions.filter((c) => c.project_id === projectId);
-
-    cards.push(card(`funding-${projectId}`, {
-      title: `${current.project_name ?? 'Project'} funding`,
-      badge: current.stage_number && el('span', { class: 'tag' }, `Stage ${current.stage_number} of ${list.length}`),
-    },
-      el('h3', {}, current.status === 'Underway' ? `Now: ${current.name}` : `Next: ${current.name}`),
-      moneyLine(current, currentItems),
-      currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow)),
-      owedLine(list, itemsByStage, mine),
-      el('details', {},
-        el('summary', {}, `All stages (${list.length})`),
-        el('ul', { class: 'takes' }, list.map((s) => {
-          const its = itemsByStage.get(s.id) ?? [];
-          const goal = goalOf(its);
-          return el('li', { class: 'take' },
-            el('div', { class: 'take-main' },
-              el('span', { class: 'take-song' }, stageLabel(s)),
-              el('span', { class: 'take-name' },
-                goal > 0 ? `${money(Number(s.raised) || 0)} of ${money(goal)}` : `${money(Number(s.raised) || 0)} raised`)),
-            el('div', { class: 'take-meta' },
-              s.status && el('span', { class: `tag stage-${slug(s.status)}` }, s.status)),
-            s.id !== current.id && its.length > 0 && el('ul', { class: 'takes nested' }, its.map(itemRow)));
-        })))));
-  }
-  return cards;
+  const list = projectsOf(d);
+  if (list.length === 0) return panel('Project updates', null, el('p', { class: 'muted' }, 'No active projects right now.'));
+  return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'tag' }, p.status),
+    p?.release_date && el('p', { class: 'release' }, `Release: ${new Date(`${p.release_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`),
+    p?.summary && el('p', { class: 'ann-body' }, p.summary),
+    songsBlock(p?.songs),
+    fundingBlock(stages, itemsByStage, d.contributions.filter((c) => c.project_id === id))));
 }
 
-// Released and In the works --------------------------------------------------
+// In the works and Discography -----------------------------------------------
 
 const isReleased = (s) => s.development_stage === 'Released' || s.status === 'Released';
 
@@ -435,38 +447,67 @@ function collectSongs(credits, takes) {
   return [...bySong.values()];
 }
 
-function releasedSection(songs) {
-  const released = songs.filter(isReleased)
-    .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
-  return card('discography', {
-    title: 'Discography',
-    badge: el('span', { class: 'count' }, String(released.length)),
-  },
-    released.length
-      ? el('ul', { class: 'songs' }, released.map(songRow))
-      : el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'));
-}
+const releasedOf = (songs) => songs.filter(isReleased)
+  .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
+const workingOf = (songs) => songs.filter((s) => !isReleased(s))
+  .sort((a, b) => Number(b.owes) - Number(a.owes)
+    || (a.target_release_date ?? '9999').localeCompare(b.target_release_date ?? '9999')
+    || a.name.localeCompare(b.name));
 
-function inTheWorksSection(songs) {
-  const working = songs.filter((s) => !isReleased(s))
-    .sort((a, b) => Number(b.owes) - Number(a.owes)
-      || (a.target_release_date ?? '9999').localeCompare(b.target_release_date ?? '9999')
-      || a.name.localeCompare(b.name));
-  return card('works', {
-    title: 'In the works',
-    badge: el('span', { class: 'count' }, String(working.length)),
-  },
+function worksView(d) {
+  const working = workingOf(d.songs);
+  return panel('In the works', countTag(working.length),
     working.length
       ? el('ul', { class: 'songs' }, working.map(songRow))
       : el('p', { class: 'muted' }, 'No songs in the works with your name on them.'));
 }
 
+function discographyView(d) {
+  const released = releasedOf(d.songs);
+  return panel('Discography', countTag(released.length),
+    released.length
+      ? el('ul', { class: 'songs' }, released.map(songRow))
+      : el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'));
+}
+
+// Home tiles ------------------------------------------------------------------
+
+function tile(hash, title, count, sub, state) {
+  return el('a', { class: `tile${state ? ` ${state}` : ''}`, href: `#${hash}` },
+    el('span', { class: 'tile-count' }, count),
+    el('span', { class: 'tile-title' }, title),
+    sub && el('span', { class: 'tile-sub' }, sub));
+}
+
+function homeView(d) {
+  const o = owed(d);
+  const ackBy = new Map(d.acks.map((k) => [k.announcement_id, k]));
+  const news = splitRead(d.announcements.filter((a) => !isRequest(a)), ackBy);
+  const crewOpen = crewTasksOf(d).filter(isOpenTask).length;
+  const projects = projectsOf(d);
+  const working = workingOf(d.songs).length;
+  const released = releasedOf(d.songs).length;
+  return el('nav', { class: 'tiles', 'aria-label': 'Sections' },
+    tile('owe', 'What you owe', String(o.count),
+      o.overdue ? 'Something’s overdue' : o.count ? 'Waiting on you' : 'All clear',
+      o.overdue ? 'bad' : o.count ? 'hot' : null),
+    tile('news', 'Crew news', String(news.unread.length), news.unread.length ? 'Unread' : 'Caught up', news.unread.length ? 'hot' : null),
+    tile('crew', 'Crew tasks', String(crewOpen), crewOpen ? 'Open' : 'None open'),
+    tile('projects', 'Project updates', String(projects.length),
+      projects.length === 1 ? projects[0].name : projects.length ? 'Active projects' : 'None active'),
+    tile('works', 'In the works', String(working), working === 1 ? 'Song' : 'Songs'),
+    tile('discography', 'Discography', String(released), 'Released'));
+}
+
+const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView };
+
 // Main --------------------------------------------------------------------
 
 const SONG_FIELDS = 'id, name, development_stage, status, release_date, target_release_date, song_link, bandcamp_link';
 let me = null;
+let current = null;   // last loaded data
 
-// V2 tables may not exist yet while setup is in progress. A missing one
+// Newer tables may not exist yet while setup is in progress. A missing one
 // shows as empty instead of breaking the page.
 async function optionalRows(query, label) {
   const { data, error } = await query;
@@ -477,14 +518,26 @@ async function optionalRows(query, label) {
   return data ?? [];
 }
 
+function draw() {
+  if (!current) return;
+  const view = VIEWS[location.hash.slice(1)];
+  if (view) {
+    show(backLink(), view(current));
+  } else {
+    show(el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeView(current));
+  }
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', draw);
+
 async function refresh() {
-  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions] = await Promise.all([
+  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects] = await Promise.all([
     supabase.from('takes')
       .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
       .order('due_date', { ascending: true, nullsFirst: false }),
     supabase.from('song_credits').select(`role, song:songs(${SONG_FIELDS})`),
     optionalRows(supabase.from('tasks').select('id, name, status, due_date, assignee_ids, is_crew'), 'tasks'),
-    optionalRows(supabase.from('announcements').select('id, title, body, publish_date'), 'announcements'),
+    optionalRows(supabase.from('announcements').select('*'), 'announcements'),
     optionalRows(supabase.from('announcement_acks').select('announcement_id, acknowledged_at'), 'acknowledgements'),
     optionalRows(supabase.from('member_updates')
       .select('item_type, item_id, new_status, created_at, attempts')
@@ -493,22 +546,19 @@ async function refresh() {
     optionalRows(supabase.from('funding_stages').select('id, project_id, project_name, stage_number, name, status, raised'), 'funding stages'),
     optionalRows(supabase.from('funding_items').select('id, stage_id, name, quote, status, notes'), 'funding items'),
     optionalRows(supabase.from('contributions').select('id, project_id, amount, repayment'), 'contributions'),
+    optionalRows(supabase.from('projects').select('id, name, status, release_date, summary, songs'), 'projects'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
 
   pendingByItem = new Map(updates.map((u) => [`${u.item_type}:${u.item_id}`, u]));
-  const songs = collectSongs(creditsRes.data, takesRes.data);
-
-  show(
-    el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`),
-    announcementsSection(announcements, acks),
-    takesSection(takesRes.data),
-    tasksSection(tasks, me.id),
-    ...fundingSections(stages, items, contributions),
-    inTheWorksSection(songs),
-    releasedSection(songs),
-  );
+  current = {
+    takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects,
+    songs: collectSongs(creditsRes.data, takesRes.data),
+  };
+  const y = window.scrollY;
+  draw();
+  window.scrollTo(0, y);
 }
 
 async function render(session) {
