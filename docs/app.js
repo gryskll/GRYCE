@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+import { helpView } from './help-full.js';
 
 const app = document.getElementById('app');
 
@@ -45,11 +46,12 @@ document.getElementById('sign-out').addEventListener('click', async () => {
 
 function signInView(error) {
   show(el('section', { class: 'hero' },
-    el('div', { class: 'wordmark-plate' }, el('img', { src: 'img/wordmark.png', alt: 'GRYSKLL', width: '800', height: '385' })),
+    el('img', { class: 'signin-mark', src: 'img/skull-green.png', alt: 'GRYSKLL', width: '182', height: '256' }),
     el('p', { class: 'eyebrow' }, 'GRYSKLL members'),
-    el('h1', {}, 'Your takes. Your catalog.'),
+    el('h1', {}, 'Don’t let it die on your hard drive.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),
     error && el('p', { class: 'error' }, error),
+    el('p', { class: 'small muted' }, 'First time here? ', el('a', { href: 'help.html' }, 'Here’s how to get in.')),
     el('button', {
       class: 'primary', type: 'button',
       onclick: async (e) => {
@@ -67,7 +69,8 @@ function notLinkedView(email) {
   show(el('section', { class: 'card' },
     el('h1', {}, 'You’re signed in, but not linked yet'),
     el('p', {}, 'There’s no GRYSKLL artist record for ', el('strong', {}, email), '.'),
-    el('p', { class: 'muted' }, 'Send this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.')));
+    el('p', { class: 'muted' }, 'Text this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.'),
+    el('p', { class: 'small muted' }, 'gryCE is for GRYSKLL members right now. ', el('a', { href: 'help.html' }, 'Help getting in'))));
 }
 
 // Member updates ----------------------------------------------------------
@@ -526,9 +529,10 @@ function homeView(d) {
     tile('works', 'In the works', String(working), working === 1 ? 'Song' : 'Songs'),
     tile('discography', 'Discography', String(released), 'Released'));
 }
+const homeHelp = () => el('p', { class: 'small muted home-help' }, el('a', { href: '#help' }, 'How gryCE works'));
 
-const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView };
-const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography' };
+const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help' };
 
 // Main --------------------------------------------------------------------
 
@@ -554,7 +558,7 @@ function draw() {
     const key = location.hash.slice(1);
     show(el('nav', { class: 'crumbs' }, backLink(), el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
-    show(el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeView(current));
+    show(el('p', { class: 'eyebrow' }, `What’s up, ${me.name}`), homeView(current), homeHelp());
   }
   window.scrollTo(0, 0);
 }
@@ -599,6 +603,8 @@ async function render(session) {
   if (meErr) return show(el('p', { class: 'error' }, `Couldn’t load your profile: ${meErr.message}`));
   if (!data) return notLinkedView(email);
   me = data;
+  // Linked members get the full help inside gryCE. Everyone else gets the sign-in help page.
+  document.getElementById('help-link').href = '#help';
 
   document.getElementById('who-name').textContent = me.name;
   document.getElementById('who').hidden = false;
