@@ -12,7 +12,7 @@ GRYSKLL Creative Engine. A member portal: crew members sign in with Google and s
 
 ## Version
 
-The version shows in the footer of every page, including sign-in. It lives in one place, `docs/index.html`. V1 was 0.1, V2 was 0.2, and V3 is 0.3. It stays under 1.0 while gryCE is in development. Bump it with every release.
+The version shows in the footer of every page, including sign-in. It lives in one place, `docs/index.html`. V1 was 0.1, V2 was 0.2, and V3 is 0.3. Fixes and polish bump the last number (0.3.1). It stays under 1.0 while gryCE is in development. Bump it with every release.
 
 ## Access
 

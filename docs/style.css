@@ -10,6 +10,7 @@
   --radius: 14px;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
 body {
   font: 15px/1.5 Inter, system-ui, -apple-system, sans-serif;
@@ -22,8 +23,9 @@ a:hover { text-decoration: underline; }
   display: flex; justify-content: space-between; align-items: center;
   padding: 18px 20px; border-bottom: 1px solid var(--line);
 }
-.brand { font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: .5px; }
-.brand span { color: var(--accent); }
+.brand { font-family: 'Archivo Black', sans-serif; font-size: 22px; letter-spacing: .5px; display: flex; align-items: center; gap: 10px; }
+.brand-mark { height: 34px; width: auto; display: block; }
+.brand .ce { color: var(--accent); }
 .who { display: flex; gap: 14px; align-items: center; color: var(--muted); font-size: 14px; }
 
 main { width: 100%; max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; flex: 1; }
@@ -49,8 +51,26 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 22px; margin-bottom: 20px;
 }
-.card-head { display: flex; align-items: center; justify-content: space-between; }
-.card-head h2 { margin: 0; }
+.card-head { margin: 0; font-size: 20px; }
+.card-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left;
+}
+.card-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 6px; }
+.card-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.chev {
+  width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); margin: -4px 4px 0; transition: transform .15s;
+}
+.card-toggle[aria-expanded="true"] .chev { transform: rotate(225deg); margin-top: 4px; }
+.card-body { margin-top: 14px; }
+.card-body > .muted:first-child { margin-top: 0; }
+.card { padding: 18px 22px; }
+.wordmark-plate {
+  background: #ecebe6; border-radius: var(--radius); padding: 10px 18px; margin-bottom: 28px;
+  max-width: 300px;
+}
+.wordmark-plate img { width: 100%; height: auto; display: block; }
 .count {
   min-width: 32px; height: 32px; padding: 0 10px; border-radius: 999px;
   display: grid; place-items: center; background: #23232a; font-weight: 600;
