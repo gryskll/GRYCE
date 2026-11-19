@@ -52,6 +52,7 @@ Members never edit synced tables. Updates go into `member_updates` (insert only,
 | `V3-SETUP.md` | V3 funding setup steps |
 | `scripts/sync-notion.mjs` | Push member updates, Notion → Supabase sync, write-back. No dependencies |
 | `.github/workflows/sync-notion.yml` | Runs the sync on a schedule |
+| `CHANGELOG.md` | What changed in each release |
 | `docs/` | The member portal |
 | `docs/help.html` | Public sign-in help |
 | `docs/help-full.js` | Full member guide, shown inside gryCE |
