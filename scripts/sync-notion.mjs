@@ -497,6 +497,8 @@ for (const p of songPages) {
     songStageByProject.get(projectId).push({
       name: text(p.properties['Name']) ?? '(untitled)',
       stage: select(p.properties['Development Stage']),
+      // Out in the world, even if it's being remastered for the album.
+      released: select(p.properties['Status']) === 'Released' || select(p.properties['Development Stage']) === 'Released',
       owed: owedBySong.get(p.id) ?? [],
     });
   }

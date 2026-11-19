@@ -377,14 +377,18 @@ function songsBlock(songs) {
   const sorted = [...songs].sort((a, b) => stageRank(a.stage) - stageRank(b.stage) || a.name.localeCompare(b.name));
   const counts = new Map();
   for (const s of sorted) counts.set(s.stage ?? 'No stage', (counts.get(s.stage ?? 'No stage') ?? 0) + 1);
+  const out = songs.filter((s) => s.released).length;
   return el('div', { class: 'block' },
     el('h3', {}, `Songs · ${songs.length}`),
+    out > 0 && el('p', { class: 'small muted' }, `${out} of ${songs.length} already out. Album versions follow the stages below.`),
     el('div', { class: 'take-meta' }, [...counts].map(([stage, n]) => el('span', { class: `tag dev-${slug(stage)}` }, `${n} ${stage}`))),
     el('details', {},
       el('summary', {}, 'Song by song'),
       el('ul', { class: 'songs' }, sorted.map((s) => el('li', { class: 'song' },
         el('div', { class: 'song-main' }, el('span', {}, s.name)),
-        el('div', { class: 'song-meta' }, s.stage && el('span', { class: `tag dev-${slug(s.stage)}` }, s.stage)))))));
+        el('div', { class: 'song-meta' },
+          s.stage && el('span', { class: `tag dev-${slug(s.stage)}` }, s.stage),
+          s.released && s.stage !== 'Released' && el('span', { class: 'tag dev-released' }, 'Out now'))))))); 
 }
 
 // Who still owes what on this project, grouped by person. Everyone sees it.
