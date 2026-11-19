@@ -12,11 +12,18 @@ GRYSKLL Creative Engine. A member portal: crew members sign in with Google and s
 
 ## Version
 
-The version shows in the footer of every page, including sign-in. It lives in one place, `docs/index.html`. V1 was 0.1, V2 was 0.2, and V3 is 0.3. Fixes and polish bump the last number (0.3.1, 0.3.2). It stays under 1.0 while gryCE is in development. Bump it with every release.
+The version shows in the footer of every page, including sign-in. It lives in one place, `docs/version.js`, which every page reads. V1 was 0.1, V2 was 0.2, and V3 is 0.3. Fixes and polish bump the last number (0.3.1, 0.3.2). It stays under 1.0 while gryCE is in development. Bump it with every release.
 
 ## Access
 
-A member can see their page when their Google sign-in email is in the **Email** field of their Artists record in Notion. Adding the email is the approval. Anyone else who signs in sees a "not linked yet" message and no data.
+A member can see their page when their Google sign-in email is in the **Email** field of their Artists record in Notion. Adding the email is the approval. Anyone else who signs in sees a "not linked yet" message and no data. gryCE is for GRYSKLL members only for now. Members ask for access by texting Shaah the Google email they signed in with.
+
+## Help
+
+- `docs/help.html` is public and covers getting signed in only. The sign-in and not-linked screens link to it.
+- The full guide is the Help section inside gryCE (`#help`, from `docs/help-full.js`). The footer Help link switches to it once someone is linked.
+- The full guide is kept out of the public page, not locked. Anyone who reads the site's code could still find it, so nothing private goes in it.
+- When a release changes what members see, update the full guide in the same release.
 
 Members never edit synced tables. Updates go into `member_updates` (insert only, own open items only, never Accepted). Acknowledgements go into `announcement_acks`, which the sync never deletes.
 
@@ -42,3 +49,6 @@ Members never edit synced tables. Updates go into `member_updates` (insert only,
 | `scripts/sync-notion.mjs` | Push member updates, Notion → Supabase sync, write-back. No dependencies |
 | `.github/workflows/sync-notion.yml` | Runs the sync on a schedule |
 | `docs/` | The member portal |
+| `docs/help.html` | Public sign-in help |
+| `docs/help-full.js` | Full member guide, shown inside gryCE |
+| `docs/version.js` | The version, shown in every page's footer |
