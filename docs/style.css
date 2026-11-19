@@ -267,3 +267,29 @@ a.help-button:hover { text-decoration: none; }
 .type-crewmunity h5 { color: #7fb6ff; }
 .type-family-loan h5 { color: #ff9f5a; }
 .contrib-type .takes { margin-top: 6px; }
+
+/* v0.4.10: colored groups, used across gryCE */
+.group {
+  --tone: var(--muted);
+  margin-top: 14px; padding: 12px 14px; border-radius: 12px;
+  background: color-mix(in srgb, var(--tone) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 25%, transparent);
+  border-left: 4px solid var(--tone);
+}
+.group .group { margin-top: 12px; }
+.tone-green  { --tone: var(--accent); }
+.tone-amber  { --tone: var(--warn); }
+.tone-orange { --tone: #ff9f5a; }
+.tone-blue   { --tone: #7fb6ff; }
+.tone-red    { --tone: var(--bad); }
+.tone-gray   { --tone: #8a8a96; }
+.group-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; margin-bottom: 4px; }
+.group-head h4 {
+  margin: 0; color: var(--tone); font-family: 'Archivo Black', sans-serif; font-weight: 400; font-size: 16px;
+}
+.group-count {
+  min-width: 24px; text-align: center; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  color: #0d0d0f; background: var(--tone);
+}
+.group > .takes, .group > .songs { margin-top: 6px; }
+.group > p.small { margin: 0 0 6px; }

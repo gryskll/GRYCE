@@ -176,6 +176,14 @@ function panel(title, badge, ...body) {
     el('div', { class: 'card-head' }, el('h2', {}, title), badge),
     ...body);
 }
+// A colored group inside a card: tinted box, colored edge and heading.
+// Tones: green, amber, orange, blue, red, gray.
+function group(tone, title, right, ...body) {
+  return el('div', { class: `group tone-${tone}` },
+    el('div', { class: 'group-head' }, el('h4', {}, title), right),
+    ...body);
+}
+const groupCount = (n) => el('span', { class: 'group-count' }, String(n));
 const countTag = (n, hot) => el('span', { class: hot ? 'count hot' : 'count' }, String(n));
 const backLink = () => el('a', { class: 'back', href: '#' }, '‹ All sections');
 
@@ -282,15 +290,15 @@ function oweView(d) {
   const doneTasks = o.mine.filter((k) => !isOpenTask(k));
   return panel('What you owe', countTag(o.count, o.count > 0),
     o.count === 0 && el('p', { class: 'muted' }, 'Nothing owed right now.'),
-    o.requests.unread.length > 0 && el('h3', {}, 'Requests'),
-    o.requests.unread.length > 0 && el('ul', { class: 'takes' }, o.requests.unread.map((a) => announcementRow(a, null))),
-    o.openTakes.length > 0 && el('h3', {}, 'Takes'),
-    o.openTakes.length > 0 && el('ul', { class: 'takes' }, o.openTakes.map(takeRow)),
-    o.openTasks.length > 0 && el('h3', {}, 'Tasks'),
-    o.openTasks.length > 0 && el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))),
+    o.requests.unread.length > 0 && group('amber', 'Requests', groupCount(o.requests.unread.length),
+      el('ul', { class: 'takes' }, o.requests.unread.map((a) => announcementRow(a, null)))),
+    o.openTakes.length > 0 && group('red', 'Takes', groupCount(o.openTakes.length),
+      el('ul', { class: 'takes' }, o.openTakes.map(takeRow))),
+    o.openTasks.length > 0 && group('blue', 'Tasks', groupCount(o.openTasks.length),
+      el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true)))),
     docGroups(o.docsToReview),
-    submitted.length > 0 && el('h3', {}, 'Submitted, waiting on review'),
-    submitted.length > 0 && el('ul', { class: 'takes' }, submitted.map(takeRow)),
+    submitted.length > 0 && group('gray', 'Submitted, waiting on review', groupCount(submitted.length),
+      el('ul', { class: 'takes' }, submitted.map(takeRow))),
     (accepted.length + doneTasks.length + o.requests.read.length) > 0 && el('details', {},
       el('summary', {}, `Done (${accepted.length + doneTasks.length + o.requests.read.length})`),
       el('ul', { class: 'takes' },
@@ -422,8 +430,7 @@ function fundingBlock(stages, itemsByStage, contributions) {
   btnCurrent.addEventListener('click', () => pick(false));
   btnAll.addEventListener('click', () => pick(true));
 
-  return el('div', { class: 'block' },
-    el('h3', {}, current ? `Funding · Stage ${current.stage_number ?? ''} of ${list.length}` : 'Funding · complete'),
+  return group('green', current ? `Funding · Stage ${current.stage_number ?? ''} of ${list.length}` : 'Funding · complete', null,
     el('div', { class: 'segs', role: 'group', 'aria-label': 'Funding stages' }, btnCurrent, btnAll),
     currentPane,
     allPane,
@@ -436,8 +443,7 @@ function songsBlock(songs) {
   const counts = new Map();
   for (const s of sorted) counts.set(s.stage ?? 'No stage', (counts.get(s.stage ?? 'No stage') ?? 0) + 1);
   const out = songs.filter((s) => s.released).length;
-  return el('div', { class: 'block' },
-    el('h3', {}, `Songs · ${songs.length}`),
+  return group('blue', 'Songs', groupCount(songs.length),
     out > 0 && el('p', { class: 'small muted' }, `${out} of ${songs.length} already out. Album versions follow the stages below.`),
     el('div', { class: 'take-meta' }, [...counts].map(([stage, n]) => el('span', { class: `tag dev-${slug(stage)}` }, `${n} ${stage}`))),
     el('details', {},
@@ -461,8 +467,7 @@ function outstandingBlock(songs) {
   if (byWho.size === 0) return null;
   const total = [...byWho.values()].reduce((n, l) => n + l.length, 0);
   const people = [...byWho].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
-  return el('div', { class: 'block' },
-    el('h3', {}, `Outstanding · ${total}`),
+  return group('red', 'Outstanding', groupCount(total),
     el('p', { class: 'small muted' }, 'What the project is still waiting on, from everyone.'),
     el('ul', { class: 'takes' }, people.map(([who, list]) => el('li', { class: 'take' },
       el('div', { class: 'take-main' },
@@ -700,14 +705,22 @@ function docGroups(list) {
   const input = list.filter((x) => x.status === 'Needs Input');
   const approve = list.filter((x) => x.status === 'Submitted');
   return [
-    input.length > 0 && el('h3', {}, 'Documents: input needed'),
-    input.length > 0 && el('p', { class: 'small muted' }, 'Drafts that want your thoughts. Open each one and comment in the doc.'),
-    input.length > 0 && el('ul', { class: 'takes' }, input.map(docRow)),
-    approve.length > 0 && el('h3', {}, 'Documents: ready for approval'),
-    approve.length > 0 && el('p', { class: 'small muted' }, 'Final drafts submitted to Leadership under the Document Approval Policy.'),
-    approve.length > 0 && el('ul', { class: 'takes' }, approve.map(docRow)),
+    input.length > 0 && group('orange', 'Documents: input needed', groupCount(input.length),
+      el('p', { class: 'small muted' }, 'Drafts that want your thoughts. Open each one and comment in the doc.'),
+      el('ul', { class: 'takes' }, input.map(docRow))),
+    approve.length > 0 && group('amber', 'Documents: ready for approval', groupCount(approve.length),
+      el('p', { class: 'small muted' }, 'Final drafts submitted to Leadership under the Document Approval Policy.'),
+      el('ul', { class: 'takes' }, approve.map(docRow))),
   ];
 }
+
+// Registry sections below the waiting list, in the order a document moves.
+const DOC_SECTIONS = [
+  ['Draft', 'blue', 'Being written. Not ready for Leadership yet.'],
+  ['Approved', 'green', 'Approved by Leadership. These are in force.'],
+  ['Reserved', 'gray', 'Numbers set aside for documents not started yet.'],
+  ['Retired', 'gray', 'No longer in force.'],
+];
 
 function leadershipView(d) {
   const docs = [...(d.leadership?.documents ?? [])].sort((a, b) => a.number.localeCompare(b.number));
@@ -746,8 +759,7 @@ function leadershipView(d) {
     el('div', { class: 'contrib-head' }, el('h5', {}, type), totals(list)),
     el('ul', { class: 'takes' }, list.map(contribRow)));
 
-  const stageBlock = (project) => ([stage, list]) => el('div', { class: `contrib-stage${stage === BEFORE ? ' before' : ''}` },
-    el('div', { class: 'contrib-head' }, el('h4', {}, stage), totals(list)),
+  const stageBlock = (project) => ([stage, list]) => group(stage === BEFORE ? 'amber' : 'green', stage, totals(list),
     [...groupBy(list, (c) => c.type ?? 'No type')]
       .sort((a, b) => typeRank(a[0]) - typeRank(b[0]) || a[0].localeCompare(b[0]))
       .map(typeBlock));
@@ -764,11 +776,17 @@ function leadershipView(d) {
         ? docGroups(toReview)
         : el('p', { class: 'muted' }, 'No documents waiting on Leadership.')),
     panel('Document registry', countTag(docs.length),
-      rest.length
-        ? el('details', {},
-          el('summary', {}, `Every other document (${rest.length})`),
-          el('ul', { class: 'takes' }, rest.map(docRow)))
-        : el('p', { class: 'muted' }, 'Nothing else in the registry yet.')),
+      rest.length === 0 && el('p', { class: 'muted' }, 'Nothing else in the registry yet.'),
+      DOC_SECTIONS.map(([status, tone, blurb]) => {
+        const list = rest.filter((x) => (x.status ?? 'Draft') === status);
+        return list.length > 0 && group(tone, status, groupCount(list.length),
+          el('p', { class: 'small muted' }, blurb),
+          el('ul', { class: 'takes' }, list.map(docRow)));
+      }),
+      (() => {
+        const other = rest.filter((x) => !DOC_SECTIONS.some(([st]) => st === (x.status ?? 'Draft')));
+        return other.length > 0 && group('gray', 'Other', groupCount(other.length), el('ul', { class: 'takes' }, other.map(docRow)));
+      })()),
     panel('Contributions', countTag(contribs.length),
       el('p', { class: 'small muted' }, 'Everyone’s contributions. Only Leadership sees this. Members see only their own.'),
       contribs.length === 0 && el('p', { class: 'muted' }, 'No contributions yet.'),
