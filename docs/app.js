@@ -18,7 +18,34 @@ function el(tag, attrs = {}, ...children) {
   }
   return node;
 }
-const show = (...nodes) => app.replaceChildren(...nodes);
+// Empty sections come back as null. Drop them, or the page prints "null".
+const show = (...nodes) => app.replaceChildren(...nodes.flat().filter((n) => n != null && n !== false));
+
+// Cards open and close with a tap on their header. Each member's choice is
+// remembered in this browser. Storage can be missing or blocked, so it's optional.
+const openState = (() => {
+  try { return JSON.parse(localStorage.getItem('gryce.open') || '{}'); } catch { return {}; }
+})();
+function saveOpen() {
+  try { localStorage.setItem('gryce.open', JSON.stringify(openState)); } catch { /* not saved, still works */ }
+}
+function card(id, { title, badge, attention = false, open = false }, ...body) {
+  const isOpen = openState[id] ?? open;
+  const content = el('div', { class: 'card-body', id: `body-${id}`, hidden: !isOpen }, ...body);
+  const toggle = el('button', {
+    class: 'card-toggle', type: 'button', 'aria-expanded': String(isOpen), 'aria-controls': `body-${id}`,
+    onclick: () => {
+      const nowOpen = content.hidden;
+      content.hidden = !nowOpen;
+      toggle.setAttribute('aria-expanded', String(nowOpen));
+      openState[id] = nowOpen;
+      saveOpen();
+    },
+  },
+    el('span', { class: 'card-title' }, title),
+    el('span', { class: 'card-side' }, badge, el('span', { class: 'chev', 'aria-hidden': 'true' })));
+  return el('section', { class: attention ? 'card attention' : 'card' }, el('h2', { class: 'card-head' }, toggle), content);
+}
 const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : null);
 const fmtDate = (d) =>
   d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
@@ -43,6 +70,7 @@ document.getElementById('sign-out').addEventListener('click', async () => {
 
 function signInView(error) {
   show(el('section', { class: 'hero' },
+    el('div', { class: 'wordmark-plate' }, el('img', { src: 'img/wordmark.png', alt: 'GRYSKLL', width: '800', height: '385' })),
     el('p', { class: 'eyebrow' }, 'GRYSKLL members'),
     el('h1', {}, 'Your takes. Your catalog.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),
@@ -169,10 +197,14 @@ function announcementsSection(announcements, acks) {
   const sorted = [...announcements].sort((a, b) => (b.publish_date ?? '').localeCompare(a.publish_date ?? ''));
   const unread = sorted.filter((a) => !ackBy.has(a.id));
   const read = sorted.filter((a) => ackBy.has(a.id));
-  return el('section', { class: unread.length ? 'card attention' : 'card' },
-    el('div', { class: 'card-head' },
-      el('h2', {}, 'Crew news'),
-      unread.length > 0 && el('span', { class: 'count hot' }, String(unread.length))),
+  // Unread news always opens, whatever was chosen last time.
+  if (unread.length) delete openState.news;
+  return card('news', {
+    title: 'Crew news',
+    badge: unread.length > 0 && el('span', { class: 'count hot' }, String(unread.length)),
+    attention: unread.length > 0,
+    open: unread.length > 0,
+  },
     unread.length
       ? el('ul', { class: 'takes' }, unread.map((a) => announcementCard(a, null)))
       : el('p', { class: 'muted' }, 'You’re caught up.'),
@@ -208,10 +240,11 @@ function takesSection(takes) {
   const submitted = takes.filter((t) => t.status === 'Submitted');
   const done = takes.filter((t) => t.status === 'Accepted');
 
-  return el('section', { class: 'card' },
-    el('div', { class: 'card-head' },
-      el('h2', {}, 'What you owe'),
-      el('span', { class: 'count' }, String(open.length))),
+  return card('owe', {
+    title: 'What you owe',
+    badge: el('span', { class: 'count' }, String(open.length)),
+    open: open.length > 0,
+  },
     open.length
       ? el('ul', { class: 'takes' }, open.map(takeRow))
       : el('p', { class: 'muted' }, 'Nothing owed right now.'),
@@ -250,10 +283,11 @@ function tasksSection(tasks, meId) {
   const crew = tasks.filter((k) => !mineOf(k) && isOpenTask(k)).sort(byDue);
   const done = tasks.filter((k) => !isOpenTask(k));
 
-  return el('section', { class: 'card' },
-    el('div', { class: 'card-head' },
-      el('h2', {}, 'Your tasks'),
-      el('span', { class: 'count' }, String(mine.length))),
+  return card('tasks', {
+    title: 'Your tasks',
+    badge: el('span', { class: 'count' }, String(mine.length)),
+    open: mine.length > 0,
+  },
     mine.length
       ? el('ul', { class: 'takes' }, mine.map((k) => taskRow(k, true)))
       : el('p', { class: 'muted' }, 'No tasks on you right now.'),
@@ -339,10 +373,10 @@ function fundingSections(stages, items, contributions) {
     const currentItems = itemsByStage.get(current.id) ?? [];
     const mine = contributions.filter((c) => c.project_id === projectId);
 
-    cards.push(el('section', { class: 'card' },
-      el('div', { class: 'card-head' },
-        el('h2', {}, `${current.project_name ?? 'Project'} funding`),
-        current.stage_number && el('span', { class: 'tag' }, `Stage ${current.stage_number} of ${list.length}`)),
+    cards.push(card(`funding-${projectId}`, {
+      title: `${current.project_name ?? 'Project'} funding`,
+      badge: current.stage_number && el('span', { class: 'tag' }, `Stage ${current.stage_number} of ${list.length}`),
+    },
       el('h3', {}, current.status === 'Underway' ? `Now: ${current.name}` : `Next: ${current.name}`),
       moneyLine(current, currentItems),
       currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow)),
@@ -404,10 +438,10 @@ function collectSongs(credits, takes) {
 function releasedSection(songs) {
   const released = songs.filter(isReleased)
     .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
-  return el('section', { class: 'card' },
-    el('div', { class: 'card-head' },
-      el('h2', {}, 'Discography'),
-      el('span', { class: 'count' }, String(released.length))),
+  return card('discography', {
+    title: 'Discography',
+    badge: el('span', { class: 'count' }, String(released.length)),
+  },
     released.length
       ? el('ul', { class: 'songs' }, released.map(songRow))
       : el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'));
@@ -418,10 +452,10 @@ function inTheWorksSection(songs) {
     .sort((a, b) => Number(b.owes) - Number(a.owes)
       || (a.target_release_date ?? '9999').localeCompare(b.target_release_date ?? '9999')
       || a.name.localeCompare(b.name));
-  return el('section', { class: 'card' },
-    el('div', { class: 'card-head' },
-      el('h2', {}, 'In the works'),
-      el('span', { class: 'count' }, String(working.length))),
+  return card('works', {
+    title: 'In the works',
+    badge: el('span', { class: 'count' }, String(working.length)),
+  },
     working.length
       ? el('ul', { class: 'songs' }, working.map(songRow))
       : el('p', { class: 'muted' }, 'No songs in the works with your name on them.'));
