@@ -5,7 +5,7 @@ const HELP = `
 <p class="muted help-intro">gryCE, the GRYSKLL Creative Engine, is the crew's member portal. Here's how each part works.</p>
 <section class="card">
       <h2>Home</h2>
-      <p>Home is six tiles. Tap one to open it. Your phone's back button, or <strong>‹ All sections</strong>, brings you back.</p>
+      <p>Home is six tiles. Tap one to open it. Your phone's back button, or <strong>‹ All sections</strong>, brings you back. The <strong>How gryCE works</strong> button at the top of Home opens this guide.</p>
       <ul>
         <li><strong>What you owe:</strong> everything waiting on you.</li>
         <li><strong>Crew news:</strong> announcements for the crew.</li>
@@ -14,6 +14,7 @@ const HELP = `
         <li><strong>In the works:</strong> songs with your name on them that aren't out yet.</li>
         <li><strong>Discography:</strong> your released songs.</li>
       </ul>
+      <p>ISRC Admins and the Leadership Team get one more tile each. Both are explained further down.</p>
       <p class="muted">A red tile means something's overdue. An amber tile means something's waiting on you or unread.</p>
     </section>
 <section class="card">

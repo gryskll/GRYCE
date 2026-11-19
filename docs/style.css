@@ -199,7 +199,10 @@ a.brand { color: var(--text); text-decoration: none; }
 .help .card ul, .help .card ol { margin: 0 0 10px; padding-left: 20px; }
 .help .card li { margin-bottom: 6px; }
 .help .card li:last-child, .help .card p:last-child { margin-bottom: 0; }
-.home-help { margin-top: 18px; text-align: center; }
+.home-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 0 0 16px; }
+.home-head .eyebrow { margin: 0; }
+a.help-button { display: inline-block; color: var(--text); text-decoration: none; font-weight: 600; padding: 8px 16px; font-size: 14px; }
+a.help-button:hover { text-decoration: none; }
 .help-intro { margin: 0 0 20px; }
 .signin-mark { display: block; width: 96px; height: auto; margin-bottom: 28px; }
 
