@@ -63,3 +63,11 @@ Supabase, the GRYSKLL organization, the gryCE project, SQL Editor, New query. Pa
 ## Before the crew Patreon post
 
 Reconnect Claude's Supabase connector scoped and read-only. That's a task in GRYSKLL Tasks, with the URL in its notes.
+
+## v0.4.9: every contribution names who gave it
+
+**SQL:** `supabase/migrations/v4-2-contributors.sql` (applied November 19).
+
+- **Supporters** lives on the GRYSCO Leadership page: people who back GRYSKLL but aren't artists (Crewmunity, family, friends), with contact details, last thank-you and gifts sent. It never syncs to gryCE.
+- Every Contributions row links to an **Artist** (crew) or a **Supporter** (everyone else). Name the row after the person.
+- gryCE shows each contributor's name in the Leadership section. A row linked to nobody gets a "Link to a person in Notion" tag.

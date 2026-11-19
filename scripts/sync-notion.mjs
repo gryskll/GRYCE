@@ -542,6 +542,10 @@ const contributions = !CONTRIBUTIONS_DB ? null : await optional('contributions',
       stage_id: (await relation(p, 'Stage'))[0] ?? null,
       amount: num(p.properties['Amount']),
       type: select(p.properties['Type']),
+      // The row's title names who gave it. Supporter links to the Leadership-only
+      // Supporters database. Only the id comes across, never contact details.
+      contributor_name: titleOf(p),
+      supporter_id: (await relation(p, 'Supporter'))[0] ?? null,
       repayment: select(p.properties['Repayment']),
       contributed_on: date(p.properties['Date']),
       synced_at: runStart,
