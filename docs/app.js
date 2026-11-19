@@ -264,6 +264,107 @@ function tasksSection(tasks, meId) {
       el('ul', { class: 'takes' }, done.map((k) => taskRow(k, mineOf(k))))));
 }
 
+// Funding -------------------------------------------------------------------
+// One card per project with funding stages. It shows the stage that's open now.
+// A stage's goal is the sum of its item quotes, so it grows as quotes come in.
+
+const money = (n) => new Intl.NumberFormat('en-US', {
+  style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 2,
+}).format(n);
+const needsQuote = (i) => i.quote == null || i.status === 'Needs quote';
+const goalOf = (items) => items.reduce((sum, i) => sum + (Number(i.quote) || 0), 0);
+const stageLabel = (s) => (s.stage_number ? `Stage ${s.stage_number}, ${s.name}` : s.name);
+
+function itemRow(i) {
+  return el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, i.name),
+      i.quote != null && el('span', { class: 'take-name' }, money(i.quote))),
+    el('div', { class: 'take-meta' },
+      i.status && el('span', { class: `tag item-${slug(i.status)}` }, i.status)),
+    i.notes && el('p', { class: 'take-notes' }, i.notes));
+}
+
+function moneyLine(stage, items) {
+  const goal = goalOf(items);
+  const waiting = items.filter(needsQuote).length;
+  const raised = Number(stage.raised) || 0;
+  const waitText = waiting > 0 && `${waiting} ${waiting === 1 ? 'item is' : 'items are'} waiting on quotes.`;
+  if (goal === 0) {
+    return el('div', { class: 'money' },
+      el('p', {}, el('strong', {}, money(raised)), ' raised. The goal comes once quotes are in.'),
+      waitText && el('p', { class: 'small muted' }, waitText));
+  }
+  const pct = Math.min(100, Math.round((raised / goal) * 100));
+  return el('div', { class: 'money' },
+    el('p', {}, el('strong', {}, money(raised)), ` raised of ${money(goal)}`, waiting > 0 ? ' so far' : '', '.'),
+    el('div', { class: 'meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct) },
+      el('span', { style: `width: ${pct}%` })),
+    waitText && el('p', { class: 'small muted' }, `${waitText} The goal goes up as they come in.`));
+}
+
+function owedLine(projectStages, itemsByStage, mine) {
+  const owed = mine.filter((c) => c.repayment === 'Owed');
+  if (owed.length === 0) return null;
+  const known = owed.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const unknown = owed.filter((c) => c.amount == null).length;
+  const repayStage = projectStages.find((s) =>
+    (itemsByStage.get(s.id) ?? []).some((i) => /^repay/i.test(i.name)));
+  return el('div', { class: 'owed' },
+    el('p', {},
+      'You’ve put in ', el('strong', {}, money(known)),
+      unknown > 0 ? `, plus ${unknown === 1 ? 'one payment' : `${unknown} payments`} still being confirmed` : '',
+      '. ',
+      repayStage ? `It’s paid back at face value in ${stageLabel(repayStage)}.` : 'It’s paid back at face value.'));
+}
+
+function fundingSections(stages, items, contributions) {
+  const itemsByStage = new Map();
+  for (const i of items) {
+    if (!itemsByStage.has(i.stage_id)) itemsByStage.set(i.stage_id, []);
+    itemsByStage.get(i.stage_id).push(i);
+  }
+  const byProject = new Map();
+  for (const s of stages) {
+    const key = s.project_id ?? 'none';
+    if (!byProject.has(key)) byProject.set(key, []);
+    byProject.get(key).push(s);
+  }
+
+  const cards = [];
+  for (const [projectId, list] of byProject) {
+    list.sort((a, b) => (a.stage_number ?? 99) - (b.stage_number ?? 99));
+    const current = list.find((s) => s.status === 'Underway') ?? list.find((s) => s.status !== 'Complete');
+    if (!current) continue;
+    const currentItems = itemsByStage.get(current.id) ?? [];
+    const mine = contributions.filter((c) => c.project_id === projectId);
+
+    cards.push(el('section', { class: 'card' },
+      el('div', { class: 'card-head' },
+        el('h2', {}, `${current.project_name ?? 'Project'} funding`),
+        current.stage_number && el('span', { class: 'tag' }, `Stage ${current.stage_number} of ${list.length}`)),
+      el('h3', {}, current.status === 'Underway' ? `Now: ${current.name}` : `Next: ${current.name}`),
+      moneyLine(current, currentItems),
+      currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow)),
+      owedLine(list, itemsByStage, mine),
+      el('details', {},
+        el('summary', {}, `All stages (${list.length})`),
+        el('ul', { class: 'takes' }, list.map((s) => {
+          const its = itemsByStage.get(s.id) ?? [];
+          const goal = goalOf(its);
+          return el('li', { class: 'take' },
+            el('div', { class: 'take-main' },
+              el('span', { class: 'take-song' }, stageLabel(s)),
+              el('span', { class: 'take-name' },
+                goal > 0 ? `${money(Number(s.raised) || 0)} of ${money(goal)}` : `${money(Number(s.raised) || 0)} raised`)),
+            el('div', { class: 'take-meta' },
+              s.status && el('span', { class: `tag stage-${slug(s.status)}` }, s.status)),
+            s.id !== current.id && its.length > 0 && el('ul', { class: 'takes nested' }, its.map(itemRow)));
+        })))));
+  }
+  return cards;
+}
+
 // Released and In the works --------------------------------------------------
 
 const isReleased = (s) => s.development_stage === 'Released' || s.status === 'Released';
@@ -343,7 +444,7 @@ async function optionalRows(query, label) {
 }
 
 async function refresh() {
-  const [takesRes, creditsRes, tasks, announcements, acks, updates] = await Promise.all([
+  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions] = await Promise.all([
     supabase.from('takes')
       .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
       .order('due_date', { ascending: true, nullsFirst: false }),
@@ -355,6 +456,9 @@ async function refresh() {
       .select('item_type, item_id, new_status, created_at, attempts')
       .is('processed_at', null)
       .order('created_at', { ascending: true }), 'updates'),
+    optionalRows(supabase.from('funding_stages').select('id, project_id, project_name, stage_number, name, status, raised'), 'funding stages'),
+    optionalRows(supabase.from('funding_items').select('id, stage_id, name, quote, status, notes'), 'funding items'),
+    optionalRows(supabase.from('contributions').select('id, project_id, amount, repayment'), 'contributions'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
@@ -367,6 +471,7 @@ async function refresh() {
     announcementsSection(announcements, acks),
     takesSection(takesRes.data),
     tasksSection(tasks, me.id),
+    ...fundingSections(stages, items, contributions),
     inTheWorksSection(songs),
     releasedSection(songs),
   );

@@ -25,6 +25,11 @@ const SOURCES = {
 const TASKS_DB = 'cf827dfc1a7e4b25abf7bd9daaa7821f';            // GRYSKLL Tasks
 const ANNOUNCEMENTS_DB = '41d53193-34ad-8139-9ce5-000b2099252b';  // Announcements (Music Catalog > gryCE)
 
+// V3 funding sources, all on the Music Catalog > gryCE page. Leave blank to skip.
+const FUNDING_STAGES_DB = '41d53193-34ad-819d-a3ef-000bb5a64fa1';
+const FUNDING_ITEMS_DB = '41d53193-34ad-81fa-93b9-000be7187efe';
+const CONTRIBUTIONS_DB = '41d53193-34ad-8137-b9a0-000b9d0e3616';
+
 // Notion property names. Change these if the Notion names differ.
 const TAKE_PROPS = { status: 'Status', submitted: 'Submitted', accepted: 'Accepted' };
 // A task is a Crew task when Owner is set to Crew. Every linked member sees those.
@@ -110,6 +115,7 @@ const text = (p) => (p?.title ?? p?.rich_text ?? []).map((t) => t.plain_text).jo
 const select = (p) => p?.select?.name ?? null;
 const statusOrSelect = (p) => p?.status?.name ?? p?.select?.name ?? null;
 const multi = (p) => (p?.multi_select ?? []).map((o) => o.name);
+const num = (p) => (typeof p?.number === 'number' ? p.number : null);
 const date = (p) => p?.date?.start?.slice(0, 10) ?? null;
 const url = (p) => p?.url ?? text(p);
 const titleOf = (page) => text(Object.values(page.properties).find((p) => p.type === 'title'));
@@ -402,6 +408,70 @@ const announcements = !ANNOUNCEMENTS_DB ? null : await optional('announcements',
   return rows;
 });
 
+// Funding: stages, the items each stage pays for, and who put money in.
+// A stage's goal isn't stored. The site adds up its item quotes.
+const projectNames = new Map();
+async function projectName(id) {
+  if (!id) return null;
+  if (!projectNames.has(id)) {
+    projectNames.set(id, await notion(`pages/${id}`).then(titleOf).catch(() => null));
+  }
+  return projectNames.get(id);
+}
+
+const fundingStages = !FUNDING_STAGES_DB ? null : await optional('funding stages', async () => {
+  const rows = [];
+  for (const p of await queryAll(await dataSourceId(FUNDING_STAGES_DB))) {
+    const projectId = (await relation(p, 'Project'))[0] ?? null;
+    rows.push({
+      id: p.id,
+      project_id: projectId,
+      project_name: await projectName(projectId),
+      stage_number: num(p.properties['Stage Number']),
+      name: titleOf(p) ?? '(unnamed stage)',
+      status: statusOrSelect(p.properties['Status']),
+      raised: num(p.properties['Raised']) ?? 0,
+      synced_at: runStart,
+    });
+  }
+  return rows;
+});
+
+const fundingItems = !FUNDING_ITEMS_DB ? null : await optional('funding items', async () => {
+  const rows = [];
+  for (const p of await queryAll(await dataSourceId(FUNDING_ITEMS_DB))) {
+    rows.push({
+      id: p.id,
+      stage_id: (await relation(p, 'Stage'))[0] ?? null,
+      name: titleOf(p) ?? '(unnamed item)',
+      quote: num(p.properties['Quote']),
+      status: statusOrSelect(p.properties['Status']),
+      notes: text(p.properties['Notes']),
+      synced_at: runStart,
+    });
+  }
+  return rows;
+});
+
+const contributions = !CONTRIBUTIONS_DB ? null : await optional('contributions', async () => {
+  const rows = [];
+  for (const p of await queryAll(await dataSourceId(CONTRIBUTIONS_DB))) {
+    const artistId = (await relation(p, 'Artist'))[0] ?? null;
+    rows.push({
+      id: p.id,
+      artist_id: artistIds.has(artistId) ? artistId : null,
+      project_id: (await relation(p, 'Project'))[0] ?? null,
+      stage_id: (await relation(p, 'Stage'))[0] ?? null,
+      amount: num(p.properties['Amount']),
+      type: select(p.properties['Type']),
+      repayment: select(p.properties['Repayment']),
+      contributed_on: date(p.properties['Date']),
+      synced_at: runStart,
+    });
+  }
+  return rows;
+});
+
 // Parents first, then children. Stale rows go children first.
 await upsert('artists', artists, 'id');
 await upsert('songs', songs, 'id');
@@ -411,9 +481,18 @@ await upsert('takes', takes, 'id');
 const tasksSaved = tasks && (await optional('tasks save', () => upsert('tasks', tasks, 'id').then(() => true)));
 const annSaved = announcements && (await optional('announcements save', () => upsert('announcements', announcements, 'id').then(() => true)));
 
+const save = (label, table, rows) =>
+  rows && optional(`${label} save`, () => upsert(table, rows, 'id').then(() => true));
+const stagesSaved = await save('funding stages', 'funding_stages', fundingStages);
+const itemsSaved = await save('funding items', 'funding_items', fundingItems);
+const contribSaved = await save('contributions', 'contributions', contributions);
+
 const staleTables = ['takes', 'song_credits', 'songs', 'artists'];
 if (tasksSaved) staleTables.unshift('tasks');
 if (annSaved) staleTables.unshift('announcements');
+if (stagesSaved) staleTables.unshift('funding_stages');
+if (itemsSaved) staleTables.unshift('funding_items');
+if (contribSaved) staleTables.unshift('contributions');
 // announcement_acks and member_updates are never in this list.
 for (const t of staleTables) await deleteStale(t, runStart);
 
@@ -448,6 +527,9 @@ console.log(
     `${credits.length} credits, ${takes.length} takes` +
     (tasksSaved ? `, ${tasks.length} tasks` : '') +
     (annSaved ? `, ${announcements.length} announcements` : '') +
+    (stagesSaved ? `, ${fundingStages.length} funding stages` : '') +
+    (itemsSaved ? `, ${fundingItems.length} funding items` : '') +
+    (contribSaved ? `, ${contributions.length} contributions` : '') +
     `. Pushed ${pushed} member updates` +
     (ackUpdates ? `, updated Acknowledged by on ${ackUpdates}` : '') +
     '.',

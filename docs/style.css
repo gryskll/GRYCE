@@ -32,6 +32,7 @@ main { width: 100%; max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; f
   padding: 18px; border-top: 1px solid var(--line); font-size: 13px;
 }
 .foot a { color: var(--muted); }
+.version { color: var(--muted); }
 
 h1, h2 { font-family: 'Archivo Black', sans-serif; font-weight: 400; margin: 0 0 10px; }
 h1 { font-size: clamp(28px, 6vw, 44px); line-height: 1.05; }
@@ -116,3 +117,14 @@ summary { cursor: pointer; color: var(--muted); font-size: 14px; }
 .row { display: flex; gap: 14px; align-items: center; }
 .task-done, .task-complete, .task-completed { color: var(--accent); }
 .task-in-progress { color: var(--warn); }
+
+/* V3: funding */
+.money { margin-top: 10px; }
+.money p { margin: 0 0 6px; }
+.meter { height: 8px; background: #23232a; border-radius: 999px; overflow: hidden; margin: 8px 0; }
+.meter span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.owed { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.owed p { margin: 0; }
+ul.takes.nested { margin: 6px 0 0 14px; }
+.item-paid, .stage-complete { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.item-quoted, .stage-underway { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
