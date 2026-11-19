@@ -30,7 +30,8 @@ const FUNDING_STAGES_DB = '41d53193-34ad-819d-a3ef-000bb5a64fa1';
 const FUNDING_ITEMS_DB = '41d53193-34ad-81fa-93b9-000be7187efe';
 const CONTRIBUTIONS_DB = '41d53193-34ad-8137-b9a0-000b9d0e3616';
 const PROJECTS_DS = 'ecf53193-34ad-82f2-9fd6-07262bc135c1';   // Music Projects
-const ACTIVE_PROJECT_STATUSES = ['In Production', 'Mixing & Mastering'];
+// Only projects with Show in gryCE ticked reach the crew.
+const SHOW_PROP = 'Show in gryCE';
 
 // Notion property names. Change these if the Notion names differ.
 const TAKE_PROPS = { status: 'Status', submitted: 'Submitted', accepted: 'Accepted' };
@@ -475,7 +476,7 @@ const contributions = !CONTRIBUTIONS_DB ? null : await optional('contributions',
   return rows;
 });
 
-// Project updates: active projects with each song's stage, read from the songs
+// Project updates: projects with Show in gryCE ticked, with each song's stage, read from the songs
 // already pulled above, so nothing else in Songs leaves Notion.
 const songStageByProject = new Map();
 for (const p of songPages) {
@@ -488,9 +489,7 @@ for (const p of songPages) {
   }
 }
 const projects = !PROJECTS_DS ? null : await optional('projects', async () => {
-  const pages = await queryAll(PROJECTS_DS, {
-    or: ACTIVE_PROJECT_STATUSES.map((name) => ({ property: 'Status', select: { equals: name } })),
-  });
+  const pages = await queryAll(PROJECTS_DS, { property: SHOW_PROP, checkbox: { equals: true } });
   return pages.map((p) => ({
     id: p.id,
     name: titleOf(p) ?? '(untitled project)',
