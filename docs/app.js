@@ -245,7 +245,8 @@ function owed(d) {
 function oweView(d) {
   const o = owed(d);
   const submitted = o.takes.filter((t) => t.status === 'Submitted');
-  const accepted = o.takes.filter((t) => t.status === 'Accepted');
+  // Not used: the take was looked at and left off the song. Nothing is owed.
+  const accepted = o.takes.filter((t) => t.status === 'Accepted' || t.status === 'Not used');
   const doneTasks = o.mine.filter((k) => !isOpenTask(k));
   return panel('What you owe', countTag(o.count, o.count > 0),
     o.count === 0 && el('p', { class: 'muted' }, 'Nothing owed right now.'),

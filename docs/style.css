@@ -182,3 +182,4 @@ ul.takes.nested { margin: 6px 0 0 14px; }
 }
 .card-head .tag { white-space: nowrap; flex-shrink: 0; }
 .card-head h2 { line-height: 1.15; }
+.status-not-used { color: var(--muted); }
