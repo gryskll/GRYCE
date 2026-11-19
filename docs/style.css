@@ -30,7 +30,7 @@ a:hover { text-decoration: underline; }
 
 main { width: 100%; max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; flex: 1; }
 .foot {
-  display: flex; gap: 18px; justify-content: center;
+  display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center;
   padding: 18px; border-top: 1px solid var(--line); font-size: 13px;
 }
 .foot a { color: var(--muted); }
@@ -237,3 +237,7 @@ a.help-button:hover { text-decoration: none; }
 .product-name .pn-word { display: inline-block; transition: opacity 0.35s ease, transform 0.35s ease; }
 .product-name .pn-word.out { opacity: 0; transform: translateY(-4px); }
 @media (prefers-reduced-motion: reduce) { .product-name .pn-word { transition: none; } }
+
+/* v0.4.6: developer credit */
+.foot .credit { flex-basis: 100%; text-align: center; color: var(--muted); font-size: 12px; }
+.foot .credit a { color: var(--text); }
