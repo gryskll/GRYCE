@@ -48,7 +48,7 @@ function signInView(error) {
   show(el('section', { class: 'hero' },
     el('img', { class: 'signin-mark', src: 'img/skull-green.png', alt: 'GRYSKLL', width: '182', height: '256' }),
     el('p', { class: 'eyebrow' }, 'GRYSKLL members'),
-    el('h1', {}, 'Your takes. Your catalog.'),
+    el('h1', {}, 'Don’t let it die on your hard drive.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),
     error && el('p', { class: 'error' }, error),
     el('p', { class: 'small muted' }, 'First time here? ', el('a', { href: 'help.html' }, 'Here’s how to get in.')),
