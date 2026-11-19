@@ -225,3 +225,15 @@ a.help-button:hover { text-decoration: none; }
 .doc-draft { color: #7fb6ff; border-color: #7fb6ff66; }
 .update-form input[type="search"] { margin: 4px 0 8px; }
 .song .update { margin-top: 8px; }
+
+/* v0.4.5: product name on sign-in */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.product-name {
+  margin: 0 0 14px; text-transform: uppercase; letter-spacing: 2px;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.product-name .pn-crew { color: var(--text); letter-spacing: 3px; margin-right: 4px; }
+.product-name .pn-c { color: var(--accent); font-weight: 800; }
+.product-name .pn-word { display: inline-block; transition: opacity 0.35s ease, transform 0.35s ease; }
+.product-name .pn-word.out { opacity: 0; transform: translateY(-4px); }
+@media (prefers-reduced-motion: reduce) { .product-name .pn-word { transition: none; } }
