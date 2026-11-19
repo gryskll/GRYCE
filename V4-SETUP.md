@@ -56,7 +56,7 @@ Supabase, the GRYSKLL organization, the gryCE project, SQL Editor, New query. Pa
 ## Keeping it current
 
 - New Leadership member or ISRC Admin: tick the box on their Artists record. It takes effect on the next sync.
-- New document: add a row to the registry. Status Submitted puts it in the Leadership tile's "waiting" count.
+- Documents: set Status to **Needs Input** when a draft wants Leadership's thoughts, or **Submitted** when it's final and waiting on approval. Both show under What you owe and on the Leadership tile for every Leadership member.
 - A code that says **Didn't reach Notion**: the song already had a different code in that field, or gryCE Write lost access to Songs. Hover the tag for the reason. Fix it in Notion. The code stays reserved either way.
 - Never type a new QT-3ZB code into Notion by hand. Issue it in gryCE so the numbering stays right.
 
