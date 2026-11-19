@@ -16,6 +16,7 @@ const HELP = `
       </ul>
       <p>ISRC Admins and the Leadership Team get one more tile each. Both are explained further down.</p>
       <p class="muted">A red tile means something's overdue. An amber tile means something's waiting on you or unread.</p>
+      <p>Inside each section, things are grouped in colored boxes so you can tell them apart at a glance. Red is something owed or holding a project up, amber is waiting on you, orange wants your input, blue is tasks, songs and drafts, and green is money raised or approved. Each box shows how many items it holds.</p>
     </section>
 <section class="card">
       <h2>What you owe</h2>
@@ -67,7 +68,13 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Leadership</h2>
-      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on documents waiting on Leadership, then the rest of the document registry (every GRY-DOC number, its status and a link), then every member's project contributions, grouped by project, then funding stage, then contributor type (Crew, Crewmunity, Family loan).</p>
+      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile with three parts:</p>
+      <ul>
+        <li><strong>Waiting on Leadership:</strong> documents that need you right now.</li>
+        <li><strong>Document registry:</strong> every other GRY-DOC number with its link, grouped by status: Draft, Approved and Reserved.</li>
+        <li><strong>Contributions:</strong> every payment toward a project and who made it, grouped by project, then funding stage, then contributor type (Crew, Crewmunity, Family loan). Money that came in before a campaign started shows first, under <strong>Before the album</strong>. Each group shows what's come in and what's still owed back.</li>
+      </ul>
+      <p>Every contribution is tied to a person, a crew member or a supporter, so Leadership can follow up with updates, thank-yous and gifts. Supporters' contact details stay in GRYSKLL's records and never show in gryCE. A contribution not tied to anyone yet gets an amber <strong>Link to a person in Notion</strong> tag.</p>
       <p>Two kinds of document wait on Leadership, and both also show under <strong>What you owe</strong>:</p>
       <ul>
         <li><strong>Input needed:</strong> a draft that wants everyone's thoughts. Open it and comment in the doc.</li>
