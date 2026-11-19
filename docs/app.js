@@ -715,13 +715,44 @@ function leadershipView(d) {
   const toReview = docsWaiting(d);
   const waiting = toReview.length;
 
-  const byProject = new Map();
-  for (const c of contribs) {
-    const key = c.project_name ?? 'No project';
-    if (!byProject.has(key)) byProject.set(key, []);
-    byProject.get(key).push(c);
-  }
   const sum = (list, pred = () => true) => list.filter(pred).reduce((n, c) => n + (Number(c.amount) || 0), 0);
+  const groupBy = (list, keyOf) => {
+    const m = new Map();
+    for (const x of list) {
+      const k = keyOf(x);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(x);
+    }
+    return m;
+  };
+  // Stages sort by their number from the funding card. Types in a fixed order.
+  const stageNo = new Map(d.stages.map((st) => [`${st.project_name}|${st.name}`, st.stage_number ?? 99]));
+  const TYPE_ORDER = ['Crew', 'Crewmunity', 'Family loan'];
+  const typeRank = (t) => { const i = TYPE_ORDER.indexOf(t); return i < 0 ? 99 : i; };
+  const totals = (list) => el('span', { class: 'take-name' },
+    `${money(sum(list))} in`,
+    sum(list, (c) => c.repayment === 'Owed') > 0 ? ` · ${money(sum(list, (c) => c.repayment === 'Owed'))} owed back` : '');
+
+  const contribRow = (c) => el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, c.artist_name ?? 'Not linked to an artist'),
+      el('span', { class: 'take-name' }, c.amount != null ? money(c.amount) : 'Amount pending')),
+    el('div', { class: 'take-meta' },
+      c.repayment && el('span', { class: `tag ${c.repayment === 'Owed' ? 'status-owed' : c.repayment === 'Repaid' ? 'status-accepted' : ''}` }, c.repayment),
+      c.contributed_on && el('span', { class: 'muted' }, fmtDate(c.contributed_on))));
+
+  const typeBlock = ([type, list]) => el('div', { class: 'contrib-type' },
+    el('div', { class: 'contrib-head' }, el('span', { class: 'tag' }, type), totals(list)),
+    el('ul', { class: 'takes' }, list.map(contribRow)));
+
+  const stageBlock = (project) => ([stage, list]) => el('div', { class: 'contrib-stage' },
+    el('div', { class: 'contrib-head' }, el('h4', {}, stage), totals(list)),
+    [...groupBy(list, (c) => c.type ?? 'No type')]
+      .sort((a, b) => typeRank(a[0]) - typeRank(b[0]) || a[0].localeCompare(b[0]))
+      .map(typeBlock));
+
+  const byProject = [...groupBy(contribs, (c) => c.project_name ?? 'No project')]
+    .sort((a, b) => a[0].localeCompare(b[0]));
 
   const rest = docs.filter((x) => !DOC_WAITING.includes(x.status));
   return [
@@ -738,20 +769,14 @@ function leadershipView(d) {
     panel('Contributions', countTag(contribs.length),
       el('p', { class: 'small muted' }, 'Everyone’s contributions. Only Leadership sees this. Members see only their own.'),
       contribs.length === 0 && el('p', { class: 'muted' }, 'No contributions yet.'),
-      [...byProject].map(([project, list]) => el('div', { class: 'block' },
-        el('h3', {}, project),
-        el('p', { class: 'small' },
-          `${money(sum(list))} in. `,
-          `${money(sum(list, (c) => c.repayment === 'Owed'))} still owed back.`),
-        el('ul', { class: 'takes' }, list.map((c) => el('li', { class: 'take' },
-          el('div', { class: 'take-main' },
-            el('span', { class: 'take-song' }, c.artist_name ?? c.type ?? 'Unlinked'),
-            el('span', { class: 'take-name' }, c.amount != null ? money(c.amount) : 'Amount pending')),
-          el('div', { class: 'take-meta' },
-            c.type && el('span', { class: 'tag' }, c.type),
-            c.repayment && el('span', { class: `tag ${c.repayment === 'Owed' ? 'status-owed' : c.repayment === 'Repaid' ? 'status-accepted' : ''}` }, c.repayment),
-            c.stage_name && el('span', { class: 'muted' }, c.stage_name),
-            c.contributed_on && el('span', { class: 'muted' }, fmtDate(c.contributed_on))))))))),
+      byProject.map(([project, list]) => el('div', { class: 'block' },
+        el('div', { class: 'contrib-head' }, el('h3', {}, project), totals(list)),
+        [...groupBy(list, (c) => c.stage_name ?? 'No stage')]
+          .sort((a, b) => (stageNo.get(`${project}|${a[0]}`) ?? 99) - (stageNo.get(`${project}|${b[0]}`) ?? 99) || a[0].localeCompare(b[0]))
+          .map(([stage, sl]) => {
+            const n = stageNo.get(`${project}|${stage}`);
+            return stageBlock(project)([n && n !== 99 ? `Stage ${n}, ${stage}` : stage, sl]);
+          })))),
   ];
 }
 

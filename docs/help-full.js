@@ -67,7 +67,7 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Leadership</h2>
-      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on documents waiting on Leadership, then the rest of the document registry (every GRY-DOC number, its status and a link), then every member's project contributions.</p>
+      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on documents waiting on Leadership, then the rest of the document registry (every GRY-DOC number, its status and a link), then every member's project contributions, grouped by project, then funding stage, then contributor type (Crew, Crewmunity, Family loan).</p>
       <p>Two kinds of document wait on Leadership, and both also show under <strong>What you owe</strong>:</p>
       <ul>
         <li><strong>Input needed:</strong> a draft that wants everyone's thoughts. Open it and comment in the doc.</li>
