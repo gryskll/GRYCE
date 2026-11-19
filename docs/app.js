@@ -735,10 +735,11 @@ function leadershipView(d) {
 
   const contribRow = (c) => el('li', { class: 'take' },
     el('div', { class: 'take-main' },
-      el('span', { class: 'take-song' }, c.artist_name ?? 'Not linked to an artist'),
+      el('span', { class: 'take-song' }, c.artist_name ?? c.contributor_name ?? 'Unnamed'),
       el('span', { class: 'take-name' }, c.amount != null ? money(c.amount) : 'Amount pending')),
     el('div', { class: 'take-meta' },
       c.repayment && el('span', { class: `tag ${c.repayment === 'Owed' ? 'status-owed' : c.repayment === 'Repaid' ? 'status-accepted' : ''}` }, c.repayment),
+      c.linked === false && el('span', { class: 'tag status-needs-decision' }, 'Link to a person in Notion'),
       c.contributed_on && el('span', { class: 'muted' }, fmtDate(c.contributed_on))));
 
   const typeBlock = ([type, list]) => el('div', { class: `contrib-type type-${slug(type)}` },
