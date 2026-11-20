@@ -30,6 +30,55 @@ function el(tag, attrs = {}, ...children) {
 const show = (...nodes) => app.replaceChildren(...[viewBanner(), ...nodes].flat().filter((n) => n != null && n !== false));
 
 const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : null);
+
+// Links show as buttons, not raw URLs. The label says where the link goes.
+function linkLabel(url) {
+  let u;
+  try { u = new URL(url); } catch { return 'Open link'; }
+  const host = u.hostname.replace(/^www\./, '');
+  const path = u.pathname;
+  if (host === 'docs.google.com') {
+    if (path.startsWith('/document')) return 'Open doc';
+    if (path.startsWith('/spreadsheets')) return 'Open sheet';
+    if (path.startsWith('/presentation')) return 'Open slides';
+    if (path.startsWith('/forms')) return 'Open form';
+  }
+  if (host === 'drive.google.com') return path.includes('/folders/') ? 'Open folder' : 'Open file';
+  if (host.endsWith('bandcamp.com')) return 'Bandcamp';
+  if (host === 'youtu.be' || host.endsWith('youtube.com')) return 'YouTube';
+  if (host.endsWith('spotify.com')) return 'Spotify';
+  if (host.endsWith('soundcloud.com')) return 'SoundCloud';
+  if (host.endsWith('notion.so') || host.endsWith('notion.site')) return 'Open in Notion';
+  if (host.endsWith('dropbox.com')) return 'Dropbox';
+  return `Open ${host}`;
+}
+function linkButton(url, label) {
+  const href = safeUrl(url);
+  if (!href) return null;
+  return el('a', { class: 'link-button', href, target: '_blank', rel: 'noopener' }, label ?? linkLabel(href));
+}
+// Free text from Notion with any URLs turned into link buttons. Text stays text.
+const URL_IN_TEXT = /https?:\/\/[^\s<>"]+/g;
+function richText(tag, attrs, text) {
+  if (!text) return null;
+  const parts = [];
+  let last = 0;
+  for (const m of text.matchAll(URL_IN_TEXT)) {
+    let url = m[0];
+    const trail = url.match(/[.,;:!?)\]]+$/);   // punctuation after a URL isn't part of it
+    if (trail) url = url.slice(0, -trail[0].length);
+    parts.push(text.slice(last, m.index));
+    parts.push(linkButton(url));
+    last = m.index + url.length;
+  }
+  // "...sheet: <url> . Used for" reads better without the space before the period.
+  let rest = text.slice(last);
+  parts.push(rest);
+  for (let i = 1; i < parts.length; i += 1) {
+    if (typeof parts[i] === 'string' && parts[i - 1] && typeof parts[i - 1] !== 'string') parts[i] = parts[i].replace(/^ +([.,;:])/, '$1');
+  }
+  return el(tag, attrs, ...parts.filter((x) => x !== ''));
+}
 const fmtDate = (d) =>
   d ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
 const isPast = (d) => d && new Date(`${d}T23:59:59`) < new Date();
@@ -88,7 +137,7 @@ function signInView(error) {
     el('h1', {}, 'Don’t let it die on your hard drive.'),
     el('p', { class: 'muted' }, 'Sign in with the Google account GRYSKLL has on file for you.'),
     error && el('p', { class: 'error' }, error),
-    el('p', { class: 'small muted' }, 'First time here? ', el('a', { href: 'help.html' }, 'Here’s how to get in.')),
+    el('p', { class: 'small muted' }, 'First time here? ', el('a', { class: 'link-button', href: 'help.html' }, 'How to get in')),
     el('button', {
       class: 'primary', type: 'button',
       onclick: async (e) => {
@@ -107,7 +156,7 @@ function notLinkedView(email) {
     el('h1', {}, 'You’re signed in, but not linked yet'),
     el('p', {}, 'There’s no GRYSKLL artist record for ', el('strong', {}, email), '.'),
     el('p', { class: 'muted' }, 'Text this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.'),
-    el('p', { class: 'small muted' }, 'gryCE is for GRYSKLL members right now. ', el('a', { href: 'help.html' }, 'Help getting in'))));
+    el('p', { class: 'small muted' }, 'gryCE is for GRYSKLL members right now. ', el('a', { class: 'link-button', href: 'help.html' }, 'Help getting in'))));
 }
 
 // Member updates ----------------------------------------------------------
@@ -227,7 +276,7 @@ function announcementRow(a, acked) {
       el('span', { class: 'take-song' }, a.title),
       a.publish_date && el('span', { class: 'take-name' }, fmtDate(a.publish_date))),
     isRequest(a) && el('div', { class: 'take-meta' }, el('span', { class: 'tag status-owed' }, 'Request')),
-    a.body && el('p', { class: 'ann-body' }, a.body),
+    richText('p', { class: 'ann-body' }, a.body),
     acked
       ? el('p', { class: 'small muted' }, `Acknowledged ${fmtDate(acked.acknowledged_at)}`)
       : viewingAs() ? el('p', { class: 'small muted' }, 'Not acknowledged yet')
@@ -274,7 +323,7 @@ function takeRow(t) {
       t.type && el('span', { class: 'tag' }, t.type),
       t.status && el('span', { class: `tag status-${slug(t.status)}` }, t.status),
       due && el('span', { class: overdue ? 'due overdue' : 'due' }, overdue ? `Overdue · ${due}` : `Due ${due}`)),
-    t.notes && el('p', { class: 'take-notes' }, t.notes),
+    richText('p', { class: 'take-notes' }, t.notes),
     pending,
     isOpenTake(t) && !pending && updateForm('take', t.id, 'Submitted', { askLink: true }));
 }
@@ -289,7 +338,9 @@ function taskRow(k, mine) {
     el('div', { class: 'take-meta' },
       k.is_crew && el('span', { class: 'tag' }, 'Crew'),
       k.status && el('span', { class: `tag task-${slug(k.status)}` }, k.status),
-      due && el('span', { class: overdue ? 'due overdue' : 'due' }, overdue ? `Overdue · ${due}` : `Due ${due}`)),
+      due && el('span', { class: overdue ? 'due overdue' : 'due' }, overdue ? `Overdue · ${due}` : `Due ${due}`),
+      linkButton(k.link)),
+    richText('p', { class: 'take-notes' }, k.gryce_note),
     pending,
     mine && isOpenTask(k) && !pending && updateForm('task', k.id, 'Done', { askLink: true }));
 }
@@ -385,8 +436,8 @@ function effortCard(k, takes) {
   };
   const link = safeUrl(k.link);
   return group(toGo.length === 0 && mine.length ? 'green' : 'blue', k.name, groupCount(`${done.length}/${mine.length}`),
-    k.gryce_note && el('p', { class: 'small' }, k.gryce_note),
-    link && el('p', { class: 'small' }, el('a', { href: link, target: '_blank', rel: 'noopener' }, 'Open the link')),
+    richText('p', { class: 'small' }, k.gryce_note),
+    link && el('p', { class: 'small' }, linkButton(link)),
     el('p', { class: 'effort-line' },
       toGo.length === 0 && mine.length
         ? 'All in. Thank you, crew.'
@@ -455,7 +506,7 @@ function itemRow(i) {
       i.quote != null && el('span', { class: 'take-name' }, money(i.quote))),
     el('div', { class: 'take-meta' },
       i.status && el('span', { class: `tag item-${slug(i.status)}` }, i.status)),
-    i.notes && el('p', { class: 'take-notes' }, i.notes));
+    richText('p', { class: 'take-notes' }, i.notes));
 }
 
 function moneyLine(stage, items) {
@@ -594,7 +645,7 @@ function projectsView(d, onlyId) {
   if (list.length === 0) return panel('Active project', null, el('p', { class: 'muted' }, 'No active projects right now.'));
   return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'pill' }, p.status),
     p?.release_date && el('p', { class: 'release' }, `Release: ${new Date(`${p.release_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`),
-    p?.summary && el('p', { class: 'ann-body' }, p.summary),
+    richText('p', { class: 'ann-body' }, p?.summary),
     outstandingBlock(p?.songs),
     songsBlock(p?.songs),
     fundingBlock(stages, itemsByStage, d.contributions.filter((c) => c.project_id === id))));
@@ -609,11 +660,12 @@ function songRow(s) {
   const when = isReleased(s) ? fmtDate(s.release_date) : (s.target_release_date && `Target ${fmtDate(s.target_release_date)}`);
   return el('li', { class: 'song' },
     el('div', { class: 'song-main' },
-      link ? el('a', { href: link, target: '_blank', rel: 'noopener' }, s.name) : el('span', {}, s.name),
+      el('span', {}, s.name),
       el('span', { class: 'roles' }, s.roles.join(' · '))),
     el('div', { class: 'song-meta' },
       !isReleased(s) && s.development_stage && el('span', { class: 'tag' }, s.development_stage),
       s.owes && el('span', { class: 'tag status-owed' }, 'Owed'),
+      link && linkButton(link, 'Listen'),
       when && el('span', { class: 'muted' }, when)));
 }
 
@@ -806,13 +858,13 @@ function docRow(x) {
   return el('li', { class: 'take' },
     el('div', { class: 'take-main' },
       el('span', { class: 'take-song' }, x.number),
-      link ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'take-name' }, x.name ?? 'Open') : el('span', { class: 'take-name' }, x.name ?? '')),
+      el('span', { class: 'take-name' }, x.name ?? '')),
     el('div', { class: 'take-meta' },
       x.status && el('span', { class: `tag doc-${slug(x.status)}` }, x.status),
       x.date_submitted && el('span', { class: 'muted' }, `Submitted ${fmtDate(x.date_submitted)}`),
       x.date_approved && el('span', { class: 'muted' }, `Approved ${fmtDate(x.date_approved)}`),
-      !link && el('span', { class: 'muted' }, 'No link yet')),
-    x.notes && el('p', { class: 'take-notes' }, x.notes));
+      link ? linkButton(link) : el('span', { class: 'muted' }, 'No link yet')),
+    richText('p', { class: 'take-notes' }, x.notes));
 }
 
 // Input needed first, then ready for approval. Used by What you owe and Leadership.
@@ -991,7 +1043,7 @@ function activeBlocks(d, id) {
   if (!proj) return null;
   const { p, stages } = proj;
   return panel('Where it stands', null,
-    p?.summary && el('p', { class: 'ann-body' }, p.summary),
+    richText('p', { class: 'ann-body' }, p?.summary),
     outstandingBlock(p?.songs),
     songsBlock(p?.songs),
     fundingBlock(stages, itemsByStage, d.contributions.filter((c) => c.project_id === id)));
@@ -1013,7 +1065,7 @@ function projectDetail(d, id) {
         ix.leadership_only && el('span', { class: 'tag status-needs-decision' }, 'Leadership only'),
         ix.release_date && el('span', { class: 'muted' }, `${ix.status === 'Released' ? 'Released' : 'Target'} ${fmtDate(ix.release_date)}`),
         (() => { const n = ix.song_count ?? songs.length; return el('span', { class: 'muted' }, `${n} song${n === 1 ? '' : 's'}${ix.released_count ? `, ${ix.released_count} out` : ''}`); })()),
-      ix.description && el('p', { class: 'ann-body' }, ix.description)),
+      richText('p', { class: 'ann-body' }, ix.description)),
     isActive && activeBlocks(d, id),
     !isActive && panel('Songs', countTag(songs.length),
       songs.length === 0 && el('p', { class: 'muted' }, 'No songs on this project yet.'),

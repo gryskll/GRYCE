@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.21, November 20, 2026
+- Links are buttons now. A web address in crew news, a note, a project update or a task shows as a button that says where it goes (Open doc, Open folder, Open sheet, Bandcamp and so on) instead of a long URL.
+- Released songs with a link get a Listen button. Registry documents get an Open doc button. Crew tasks show their note and link in the list.
+
 ## v0.4.20, November 20, 2026
 - For developers: a demo preview (`dev/preview.html`) that runs gryCE with made-up data and no account, 33 database checks that run on every pull request, and a refreshed DEVELOPERS.md with a Kicking the tires section. Nothing changes for members.
 

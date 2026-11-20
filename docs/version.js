@@ -1,4 +1,4 @@
 // The one place the gryCE version lives. Bump it with every release.
 // Every page loads this file and shows it in the footer.
-const GRYCE_VERSION = '0.4.20';
+const GRYCE_VERSION = '0.4.21';
 document.querySelectorAll('.version').forEach((n) => { n.textContent = `gryCE v${GRYCE_VERSION}`; });
