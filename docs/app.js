@@ -924,6 +924,23 @@ function projectsPage(d) {
   ];
 }
 
+// The active project's live parts, without repeating its name and status.
+function activeBlocks(d, id) {
+  const itemsByStage = new Map();
+  for (const i of d.items) {
+    if (!itemsByStage.has(i.stage_id)) itemsByStage.set(i.stage_id, []);
+    itemsByStage.get(i.stage_id).push(i);
+  }
+  const proj = projectsOf(d).find((x) => x.id === id);
+  if (!proj) return null;
+  const { p, stages } = proj;
+  return panel('Where it stands', null,
+    p?.summary && el('p', { class: 'ann-body' }, p.summary),
+    outstandingBlock(p?.songs),
+    songsBlock(p?.songs),
+    fundingBlock(stages, itemsByStage, d.contributions.filter((c) => c.project_id === id)));
+}
+
 // One project, opened from its card. The active project gets its full card
 // (outstanding, songs, funding). Every project lists its songs by stage.
 function projectDetail(d, id) {
@@ -939,9 +956,9 @@ function projectDetail(d, id) {
         ix.type && el('span', { class: 'tag' }, ix.type),
         ix.leadership_only && el('span', { class: 'tag status-needs-decision' }, 'Leadership only'),
         ix.release_date && el('span', { class: 'muted' }, `${ix.status === 'Released' ? 'Released' : 'Target'} ${fmtDate(ix.release_date)}`),
-        el('span', { class: 'muted' }, `${songs.length} song${songs.length === 1 ? '' : 's'}${ix.released_count ? `, ${ix.released_count} out` : ''}`)),
+        (() => { const n = ix.song_count ?? songs.length; return el('span', { class: 'muted' }, `${n} song${n === 1 ? '' : 's'}${ix.released_count ? `, ${ix.released_count} out` : ''}`); })()),
       ix.description && el('p', { class: 'ann-body' }, ix.description)),
-    isActive && projectsView(d, id),
+    isActive && activeBlocks(d, id),
     !isActive && panel('Songs', countTag(songs.length),
       songs.length === 0 && el('p', { class: 'muted' }, 'No songs on this project yet.'),
       stages.map((st) => {
