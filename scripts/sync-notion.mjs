@@ -427,7 +427,7 @@ const tasks = !TASKS_DB ? null : await optional('tasks', async () => {
       is_crew: select(p.properties[TASK_PROPS.owner]) === TASK_PROPS.crewOwner,
       // Group effort: the takes this crew task depends on. gryCE Note is the
       // crew-facing line. Notes stays private and is never synced.
-      linked_take_ids: await relation(p, 'Linked Takes'),
+      linked_take_ids: await relation(p, 'Linked Deliverables'),
       gryce_note: text(p.properties['gryCE Note']),
       link: url(p.properties['Link']),
       synced_at: runStart,
@@ -572,7 +572,7 @@ for (const t of takes) {
   if (!t.song_id || (t.status && !OPEN_TAKE.includes(t.status))) continue;
   for (const a of t.artist_ids) {
     if (!owedBySong.has(t.song_id)) owedBySong.set(t.song_id, []);
-    owedBySong.get(t.song_id).push({ who: artistName.get(a) ?? 'Someone', what: t.type ?? 'Take' });
+    owedBySong.get(t.song_id).push({ who: artistName.get(a) ?? 'Someone', what: t.type ?? 'Deliverable' });
   }
 }
 const songStageByProject = new Map();

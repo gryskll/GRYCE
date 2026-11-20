@@ -23,17 +23,17 @@ const HELP = `
       <p>This is the section to check first. Cards across the top show how much is in each part. Tap one to jump to it. It's split into:</p>
       <ul>
         <li><strong>Requests:</strong> things Shaah or the crew asked everyone for, like lyric sheets. Tap <strong>Acknowledge</strong> once you've seen it.</li>
-        <li><strong>Takes:</strong> verses, hooks, beats and re-records you owe, with due dates. Overdue ones are flagged in red.</li>
+        <li><strong>Deliverables:</strong> what you owe on a song, like verses, hooks, beats, stems, lyrics, mixes and artwork, with due dates. Overdue ones are flagged in red.</li>
         <li><strong>Tasks:</strong> tasks assigned to you.</li>
-        <li><strong>Submitted, waiting on review:</strong> takes you've turned in that Shaah hasn't checked yet.</li>
-        <li><strong>Done:</strong> tap it to see what's finished. A take marked <strong>Not used</strong> was reviewed and left off the song. You don't owe anything on it.</li>
+        <li><strong>Submitted, waiting on review:</strong> deliverables you've turned in that Shaah hasn't checked yet.</li>
+        <li><strong>Done:</strong> tap it to see what's finished. A deliverable marked <strong>Not used</strong> was reviewed and left off the song. You don't owe anything on it.</li>
       </ul>
     </section>
 <section class="card">
       <h2>Sending updates</h2>
-      <p>You can update your own takes and tasks right from gryCE.</p>
+      <p>You can update your own deliverables and tasks right from gryCE.</p>
       <ul>
-        <li><strong>Mark submitted</strong> on a take tells Shaah it's in. Add a link to the file and a note if you want. Shaah reviews it and marks it accepted.</li>
+        <li><strong>Mark submitted</strong> on a deliverable tells Shaah it's in. Add a link to the file and a note if you want. Shaah reviews it and marks it accepted.</li>
         <li><strong>Mark done</strong> on a task closes it out.</li>
         <li><strong>Add a note</strong> sends Shaah a note without changing anything.</li>
       </ul>
@@ -62,7 +62,7 @@ const HELP = `
 <section class="card">
       <h2>Your music</h2>
       <p><strong>Discography</strong> lists every released song you're credited on, grouped by year, newest first, with your roles. Tap a song title to listen when there's a link.</p>
-      <p><strong>In the works</strong> lists songs you're on that aren't out yet, grouped by stage, closest to release first. Songs where you still owe a take are in a red group at the top.</p>
+      <p><strong>In the works</strong> lists songs you're on that aren't out yet, grouped by stage, closest to release first. Songs where you still owe something are in a red group at the top.</p>
     </section>
 <section class="card">
       <h2>ISRC codes</h2>
@@ -89,7 +89,7 @@ const HELP = `
       <ul>
         <li>Only GRYSKLL members who are linked can see anything. A login that isn't linked sees nothing.</li>
         <li>Your own page is yours. Other members don't see your What you owe list. How much you've put into a project is only seen by you and the Leadership Team.</li>
-        <li>Takes still owed on an active project do show in that project's Outstanding list, by name.</li>
+        <li>Deliverables still owed on an active project do show in that project's Outstanding list, by name.</li>
         <li>Everyone sees crew news, crew tasks, each project's Outstanding list, and funding stages with dollar amounts.</li>
         <li>The Leadership Team also sees everyone's contributions and the document registry.</li>
         <li>ISRC Admins also see every song's ISRC codes.</li>

@@ -90,3 +90,7 @@ To start a group effort in Notion:
 3. Optional: **gryCE Note** (one or two lines the crew sees) and **Link**. **Notes** stays private.
 
 gryCE shows it at the top of Crew tasks with progress, who's in and who's still to go. Takes count as in once they're Submitted or Accepted. Mark the task Done in Notion when it's finished.
+
+## v0.4.18: Deliverables, and notes for developers
+
+Notion is already renamed. Run `supabase/migrations/v4-5-comments.sql` in the SQL Editor. It only adds descriptions to tables and functions, so it changes no data and no access. The Supabase table stays named `takes`.

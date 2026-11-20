@@ -302,7 +302,7 @@ function owed(d) {
 function oweView(d) {
   const o = owed(d);
   const submitted = o.takes.filter((t) => t.status === 'Submitted');
-  // Not used: the take was looked at and left off the song. Nothing is owed.
+  // Not used: the deliverable was looked at and left off the song. Nothing is owed.
   const accepted = o.takes.filter((t) => t.status === 'Accepted' || t.status === 'Not used');
   const doneTasks = o.mine.filter((k) => !isOpenTask(k));
   const overdueTakes = o.openTakes.filter((t) => t.status === 'Owed' && isPast(t.due_date)).length;
@@ -310,7 +310,7 @@ function oweView(d) {
   return [
     jumpCards([
       o.requests.unread.length > 0 && { title: 'Requests', count: o.requests.unread.length, sub: 'Asked of everyone', state: 'hot', target: 'owe-requests' },
-      o.openTakes.length > 0 && { title: 'Takes', count: o.openTakes.length, sub: overdueTakes ? `${overdueTakes} overdue` : 'Verses, hooks, beats', state: overdueTakes ? 'bad' : 'hot', target: 'owe-takes' },
+      o.openTakes.length > 0 && { title: 'Deliverables', count: o.openTakes.length, sub: overdueTakes ? `${overdueTakes} overdue` : 'Verses, beats, lyrics', state: overdueTakes ? 'bad' : 'hot', target: 'owe-takes' },
       o.openTasks.length > 0 && (() => {
         const late = o.openTasks.filter((k) => isPast(k.due_date)).length;
         return { title: 'Tasks', count: o.openTasks.length, sub: late ? `${late} overdue` : 'Assigned to you', state: late ? 'bad' : null, target: 'owe-tasks' };
@@ -323,7 +323,7 @@ function oweView(d) {
       o.count === 0 && el('p', { class: 'muted' }, 'Nothing owed right now.'),
       anchored('owe-requests', o.requests.unread.length > 0 && group('amber', 'Requests', groupCount(o.requests.unread.length),
         el('ul', { class: 'takes' }, o.requests.unread.map((a) => announcementRow(a, null))))),
-      anchored('owe-takes', o.openTakes.length > 0 && group('red', 'Takes', groupCount(o.openTakes.length),
+      anchored('owe-takes', o.openTakes.length > 0 && group('red', 'Deliverables', groupCount(o.openTakes.length),
         el('ul', { class: 'takes' }, o.openTakes.map(takeRow)))),
       anchored('owe-tasks', o.openTasks.length > 0 && group('blue', 'Tasks', groupCount(o.openTasks.length),
         el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))))),
@@ -368,7 +368,7 @@ function effortCard(k, takes) {
     for (const t of list) {
       const who = t.who ?? 'Someone';
       if (!m.has(who)) m.set(who, []);
-      m.get(who).push(t.song ?? t.type ?? 'Take');
+      m.get(who).push(t.song ?? t.type ?? 'Deliverable');
     }
     return [...m].sort((a, b) => a[0].localeCompare(b[0]));
   };
@@ -602,7 +602,7 @@ function songRow(s) {
       el('span', { class: 'roles' }, s.roles.join(' · '))),
     el('div', { class: 'song-meta' },
       !isReleased(s) && s.development_stage && el('span', { class: 'tag' }, s.development_stage),
-      s.owes && el('span', { class: 'tag status-owed' }, 'Take owed'),
+      s.owes && el('span', { class: 'tag status-owed' }, 'Owed'),
       when && el('span', { class: 'muted' }, when)));
 }
 
@@ -619,7 +619,7 @@ function collectSongs(credits, takes) {
     if (!t.song || !isOpenTake(t)) continue;
     const s = bySong.get(t.song.id) ?? { ...t.song, roles: [], owes: false };
     s.owes = true;
-    if (s.roles.length === 0) s.roles.push(t.type ? `${t.type} owed` : 'Take owed');
+    if (s.roles.length === 0) s.roles.push(t.type ? `${t.type} owed` : 'Deliverable owed');
     bySong.set(t.song.id, s);
   }
   return [...bySong.values()];
@@ -645,7 +645,7 @@ function worksView(d) {
   };
   return panel('In the works', countTag(working.length),
     working.length === 0 && el('p', { class: 'muted' }, 'No songs in the works with your name on them.'),
-    owes.length > 0 && group('red', 'You owe a take', groupCount(owes.length), el('ul', { class: 'songs' }, owes.map(songRow))),
+    owes.length > 0 && group('red', 'You owe something', groupCount(owes.length), el('ul', { class: 'songs' }, owes.map(songRow))),
     stages.map((st) => {
       const list = rest.filter((s) => (s.development_stage ?? 'No stage yet') === st);
       return group(toneFor(st), st, groupCount(list.length), el('ul', { class: 'songs' }, list.map(songRow)));
