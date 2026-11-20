@@ -1,6 +1,7 @@
--- gryCE v0.4.13: every project, for Leadership's Projects page.
+-- gryCE v0.4.13: every GRYSKLL project, so the whole crew sees what's in the pipeline.
 -- Run in Supabase: SQL Editor > New query > paste > Run. Safe to re-run.
--- Members still see only Show in gryCE projects, through public.projects.
+-- Names, status, type, dates and song counts only. Every signed-in member sees it.
+-- The full project card (songs, outstanding, funding) still comes from public.projects.
 
 create table if not exists public.project_index (
   id             uuid primary key,       -- Notion page id
@@ -17,9 +18,10 @@ create table if not exists public.project_index (
 alter table public.project_index enable row level security;
 
 drop policy if exists "leadership sees all projects" on public.project_index;
-create policy "leadership sees all projects" on public.project_index
+drop policy if exists "members see all projects" on public.project_index;
+create policy "members see all projects" on public.project_index
   for select to authenticated
-  using (private.is_leadership());
+  using (private.current_artist_id() is not null);
 
 revoke all on public.project_index from anon, authenticated;
 grant select on public.project_index to authenticated;

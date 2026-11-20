@@ -184,6 +184,23 @@ function group(tone, title, right, ...body) {
     ...body);
 }
 const groupCount = (n) => el('span', { class: 'group-count' }, String(n));
+
+// Section cards at the top of a page with several parts. Each one jumps to its
+// group further down the same page, so nothing is hidden behind an extra tap.
+function jumpCards(cards) {
+  const shown = cards.filter(Boolean);
+  if (shown.length < 2) return null;
+  return el('div', { class: 'tiles jump' }, shown.map(({ title, count, sub, state, target }) =>
+    el('button', {
+      class: `tile${state ? ` ${state}` : ''}`, type: 'button',
+      onclick: () => document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    },
+    el('span', { class: 'tile-count' }, String(count)),
+    el('span', { class: 'tile-title' }, title),
+    sub && el('span', { class: 'tile-sub' }, sub))));
+}
+// A group with an id, so a jump card can find it.
+const anchored = (id, node) => { if (node) node.id = id; return node; };
 const countTag = (n, hot) => el('span', { class: hot ? 'count hot' : 'count' }, String(n));
 const backLink = () => el('a', { class: 'back', href: '#' }, '‹ All sections');
 
@@ -288,23 +305,39 @@ function oweView(d) {
   // Not used: the take was looked at and left off the song. Nothing is owed.
   const accepted = o.takes.filter((t) => t.status === 'Accepted' || t.status === 'Not used');
   const doneTasks = o.mine.filter((k) => !isOpenTask(k));
-  return panel('What you owe', countTag(o.count, o.count > 0),
-    o.count === 0 && el('p', { class: 'muted' }, 'Nothing owed right now.'),
-    o.requests.unread.length > 0 && group('amber', 'Requests', groupCount(o.requests.unread.length),
-      el('ul', { class: 'takes' }, o.requests.unread.map((a) => announcementRow(a, null)))),
-    o.openTakes.length > 0 && group('red', 'Takes', groupCount(o.openTakes.length),
-      el('ul', { class: 'takes' }, o.openTakes.map(takeRow))),
-    o.openTasks.length > 0 && group('blue', 'Tasks', groupCount(o.openTasks.length),
-      el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true)))),
-    docGroups(o.docsToReview),
-    submitted.length > 0 && group('gray', 'Submitted, waiting on review', groupCount(submitted.length),
-      el('ul', { class: 'takes' }, submitted.map(takeRow))),
-    (accepted.length + doneTasks.length + o.requests.read.length) > 0 && el('details', {},
-      el('summary', {}, `Done (${accepted.length + doneTasks.length + o.requests.read.length})`),
-      el('ul', { class: 'takes' },
-        o.requests.read.map((a) => announcementRow(a, o.ackBy.get(a.id))),
-        accepted.map(takeRow),
-        doneTasks.map((k) => taskRow(k, true)))));
+  const overdueTakes = o.openTakes.filter((t) => t.status === 'Owed' && isPast(t.due_date)).length;
+  const doneCount = accepted.length + doneTasks.length + o.requests.read.length;
+  return [
+    jumpCards([
+      o.requests.unread.length > 0 && { title: 'Requests', count: o.requests.unread.length, sub: 'Asked of everyone', state: 'hot', target: 'owe-requests' },
+      o.openTakes.length > 0 && { title: 'Takes', count: o.openTakes.length, sub: overdueTakes ? `${overdueTakes} overdue` : 'Verses, hooks, beats', state: overdueTakes ? 'bad' : 'hot', target: 'owe-takes' },
+      o.openTasks.length > 0 && (() => {
+        const late = o.openTasks.filter((k) => isPast(k.due_date)).length;
+        return { title: 'Tasks', count: o.openTasks.length, sub: late ? `${late} overdue` : 'Assigned to you', state: late ? 'bad' : null, target: 'owe-tasks' };
+      })(),
+      o.docsToReview.length > 0 && { title: 'Documents', count: o.docsToReview.length, sub: 'For Leadership', state: 'hot', target: 'owe-docs' },
+      submitted.length > 0 && { title: 'Submitted', count: submitted.length, sub: 'Waiting on review', target: 'owe-submitted' },
+      doneCount > 0 && { title: 'Done', count: doneCount, sub: 'Finished', target: 'owe-done' },
+    ]),
+    panel('What you owe', countTag(o.count, o.count > 0),
+      o.count === 0 && el('p', { class: 'muted' }, 'Nothing owed right now.'),
+      anchored('owe-requests', o.requests.unread.length > 0 && group('amber', 'Requests', groupCount(o.requests.unread.length),
+        el('ul', { class: 'takes' }, o.requests.unread.map((a) => announcementRow(a, null))))),
+      anchored('owe-takes', o.openTakes.length > 0 && group('red', 'Takes', groupCount(o.openTakes.length),
+        el('ul', { class: 'takes' }, o.openTakes.map(takeRow)))),
+      anchored('owe-tasks', o.openTasks.length > 0 && group('blue', 'Tasks', groupCount(o.openTasks.length),
+        el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))))),
+      o.docsToReview.length > 0 && anchored('owe-docs', el('div', {}, docGroups(o.docsToReview))),
+      anchored('owe-submitted', submitted.length > 0 && group('gray', 'Submitted, waiting on review', groupCount(submitted.length),
+        el('ul', { class: 'takes' }, submitted.map(takeRow)))),
+      anchored('owe-done', doneCount > 0 && group('green', 'Done', groupCount(doneCount),
+        el('details', {},
+          el('summary', {}, 'Show what’s finished'),
+          el('ul', { class: 'takes' },
+            o.requests.read.map((a) => announcementRow(a, o.ackBy.get(a.id))),
+            accepted.map(takeRow),
+            doneTasks.map((k) => taskRow(k, true))))))),
+  ];
 }
 
 function newsView(d) {
@@ -312,11 +345,12 @@ function newsView(d) {
   const { unread, read } = splitRead(d.announcements.filter((a) => !isRequest(a)), ackBy);
   return panel('Crew news', unread.length > 0 && countTag(unread.length, true),
     unread.length
-      ? el('ul', { class: 'takes' }, unread.map((a) => announcementRow(a, null)))
+      ? group('amber', 'New', groupCount(unread.length), el('ul', { class: 'takes' }, unread.map((a) => announcementRow(a, null))))
       : el('p', { class: 'muted' }, 'You’re caught up.'),
-    read.length > 0 && el('details', {},
-      el('summary', {}, `Read (${read.length})`),
-      el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id))))));
+    read.length > 0 && group('gray', 'Read', groupCount(read.length),
+      el('details', {},
+        el('summary', {}, 'Show read news'),
+        el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id)))))));
 }
 
 const crewTasksOf = (d) => d.tasks.filter((k) => k.is_crew && !(k.assignee_ids ?? []).includes(me.id));
@@ -325,13 +359,24 @@ function crewView(d) {
   const crew = crewTasksOf(d);
   const open = crew.filter(isOpenTask).sort(byDue);
   const done = crew.filter((k) => !isOpenTask(k));
+  const late = open.filter((k) => isPast(k.due_date));
+  const notLate = open.filter((k) => !isPast(k.due_date));
+  const byStatus = (st) => notLate.filter((k) => (k.status ?? 'Not started') === st);
+  const known = ['In progress', 'Waiting on someone', 'Not started'];
+  const otherOpen = notLate.filter((k) => !known.includes(k.status ?? 'Not started'));
+  const g = (tone, title, list) => list.length > 0 && group(tone, title, groupCount(list.length),
+    el('ul', { class: 'takes' }, list.map((k) => taskRow(k, false))));
   return panel('Crew tasks', countTag(open.length),
-    open.length
-      ? el('ul', { class: 'takes' }, open.map((k) => taskRow(k, false)))
-      : el('p', { class: 'muted' }, 'No crew tasks open right now.'),
-    done.length > 0 && el('details', {},
-      el('summary', {}, `Done (${done.length})`),
-      el('ul', { class: 'takes' }, done.map((k) => taskRow(k, false)))));
+    open.length === 0 && el('p', { class: 'muted' }, 'No crew tasks open right now.'),
+    g('red', 'Overdue', late),
+    g('blue', 'In progress', byStatus('In progress')),
+    g('orange', 'Waiting on someone', byStatus('Waiting on someone')),
+    g('amber', 'Not started', byStatus('Not started')),
+    g('gray', 'Open', otherOpen),
+    done.length > 0 && group('green', 'Done', groupCount(done.length),
+      el('details', {},
+        el('summary', {}, 'Show finished tasks'),
+        el('ul', { class: 'takes' }, done.map((k) => taskRow(k, false))))));
 }
 
 // Project updates: where each active project stands, songs and funding --------
@@ -492,7 +537,7 @@ function projectsView(d) {
     itemsByStage.get(i.stage_id).push(i);
   }
   const list = projectsOf(d);
-  if (list.length === 0) return panel('Project updates', null, el('p', { class: 'muted' }, 'No active projects right now.'));
+  if (list.length === 0) return panel('Active project', null, el('p', { class: 'muted' }, 'No active projects right now.'));
   return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'pill' }, p.status),
     p?.release_date && el('p', { class: 'release' }, `Release: ${new Date(`${p.release_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`),
     p?.summary && el('p', { class: 'ann-body' }, p.summary),
@@ -546,18 +591,34 @@ const workingOf = (songs) => songs.filter((s) => !isReleased(s))
 
 function worksView(d) {
   const working = workingOf(d.songs);
+  const owes = working.filter((s) => s.owes);
+  const rest = working.filter((s) => !s.owes);
+  const stages = [...new Set(rest.map((s) => s.development_stage ?? 'No stage yet'))]
+    .sort((a, b) => stageRank(a) - stageRank(b));
+  // Closer to release reads greener.
+  const toneFor = (st) => {
+    const r = stageRank(st);
+    return r <= 3 ? 'green' : r <= 6 ? 'orange' : r <= 9 ? 'blue' : 'gray';
+  };
   return panel('In the works', countTag(working.length),
-    working.length
-      ? el('ul', { class: 'songs' }, working.map(songRow))
-      : el('p', { class: 'muted' }, 'No songs in the works with your name on them.'));
+    working.length === 0 && el('p', { class: 'muted' }, 'No songs in the works with your name on them.'),
+    owes.length > 0 && group('red', 'You owe a take', groupCount(owes.length), el('ul', { class: 'songs' }, owes.map(songRow))),
+    stages.map((st) => {
+      const list = rest.filter((s) => (s.development_stage ?? 'No stage yet') === st);
+      return group(toneFor(st), st, groupCount(list.length), el('ul', { class: 'songs' }, list.map(songRow)));
+    }));
 }
 
 function discographyView(d) {
   const released = releasedOf(d.songs);
+  const yearOf = (s) => (s.release_date ? s.release_date.slice(0, 4) : 'Date not set');
+  const years = [...new Set(released.map(yearOf))].sort((a, b) => b.localeCompare(a));
   return panel('Discography', countTag(released.length),
-    released.length
-      ? el('ul', { class: 'songs' }, released.map(songRow))
-      : el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'));
+    released.length === 0 && el('p', { class: 'muted' }, 'Nothing released with your name on it yet.'),
+    years.map((y, i) => {
+      const list = released.filter((s) => yearOf(s) === y);
+      return group(i === 0 && y !== 'Date not set' ? 'green' : 'blue', y, groupCount(list.length), el('ul', { class: 'songs' }, list.map(songRow)));
+    }));
 }
 
 // ISRC codes (ISRC Admins only) -----------------------------------------------
@@ -808,14 +869,11 @@ function leadershipView(d) {
   const waiting = docsWaiting(d).length;
   const contribs = d.leadership?.contributions ?? [];
   const total = contribs.reduce((n, c) => n + (Number(c.amount) || 0), 0);
-  const all = d.leadership?.projects ?? [];
-  const active = projectsOf(d).length;
   return el('div', { class: 'tiles' },
     tile('leadership/documents', 'Documents', String(waiting),
       waiting ? 'Waiting on Leadership' : `${(d.leadership?.documents ?? []).length} in the registry`,
       waiting ? 'hot' : null),
-    tile('leadership/contributions', 'Contributions', String(contribs.length), `${money(total)} from ${new Set(contribs.map((c) => c.contributor_name ?? c.artist_name)).size} people`),
-    tile('leadership/projects', 'Projects', String(all.length || active), active === 1 ? '1 active' : `${active} active`));
+    tile('leadership/contributions', 'Contributions', String(contribs.length), `${money(total)} from ${new Set(contribs.map((c) => c.contributor_name ?? c.artist_name)).size} people`));
 }
 const leadDocsView = (d) => { const x = leadershipParts(d); return [x.waiting, x.registry]; };
 const leadContribView = (d) => leadershipParts(d).contributions;
@@ -829,9 +887,9 @@ const PROJECT_SECTIONS = [
   ['Concept', 'gray'],
   ['Released', 'green'],
 ];
-function leadProjectsView(d) {
+function projectsPage(d) {
   const activeIds = new Set(projectsOf(d).map((p) => p.id));
-  const others = (d.leadership?.projects ?? []).filter((p) => !activeIds.has(p.id))
+  const others = (d.allProjects ?? []).filter((p) => !activeIds.has(p.id))
     .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
   const row = (p) => el('li', { class: 'take' },
     el('div', { class: 'take-main' },
@@ -853,7 +911,7 @@ function leadProjectsView(d) {
         const list = others.filter((p) => !known.has(p.status));
         return list.length > 0 && group('gray', 'No status', groupCount(list.length), el('ul', { class: 'takes' }, list.map(row)));
       })()),
-    others.length === 0 && (d.leadership?.projects ?? []).length === 0
+    others.length === 0 && (d.allProjects ?? []).length === 0
       && panel('Other projects', null, el('p', { class: 'muted' }, 'The full project list shows after the next sync.')),
   ];
 }
@@ -881,8 +939,11 @@ function homeView(d) {
       o.overdue ? 'bad' : o.count ? 'hot' : null),
     tile('news', 'Crew news', String(news.unread.length), news.unread.length ? 'Unread' : 'Caught up', news.unread.length ? 'hot' : null),
     tile('crew', 'Crew tasks', String(crewOpen), crewOpen ? 'Open' : 'None open'),
-    tile('projects', 'Project updates', String(projects.length),
-      projects.length === 1 ? projects[0].name : projects.length ? 'Active projects' : 'None active'),
+    (() => {
+      const total = Math.max(d.allProjects?.length ?? 0, projects.length);
+      return tile('projects', 'Projects', String(total),
+        projects.length === 1 ? `Active: ${projects[0].name}` : projects.length ? `${projects.length} active` : 'In the pipeline');
+    })(),
     tile('works', 'In the works', String(working), working === 1 ? 'Song' : 'Songs'),
     tile('discography', 'Discography', String(released), 'Released'),
     me?.isrc_admin && (() => {
@@ -898,9 +959,9 @@ function homeView(d) {
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
 
-const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, 'leadership/projects': leadProjectsView, owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
-const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership',
-  'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions', 'leadership/projects': 'Projects' };
+const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Projects', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership',
+  'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions' };
 // Sections only some members get. Anyone else who types the address lands on Home.
 const allowed = (key) => (key === 'isrc' ? me?.isrc_admin : key.startsWith('leadership') ? me?.leadership : true);
 
@@ -950,16 +1011,15 @@ async function loadIsrc() {
 }
 async function loadLeadership() {
   if (!me?.leadership || !current) return;
-  const [documents, contributions, allProjects] = await Promise.all([
+  const [documents, contributions] = await Promise.all([
     optionalRows(supabase.from('documents').select('id, number, name, status, date_submitted, date_approved, link, notes'), 'documents'),
     optionalRows(supabase.rpc('leadership_contributions'), 'all contributions'),
-    optionalRows(supabase.from('project_index').select('id, name, status, type, release_date, show_in_gryce, song_count, released_count'), 'all projects'),
   ]);
-  current.leadership = { documents, contributions, projects: allProjects };
+  current.leadership = { documents, contributions };
 }
 
 async function refresh() {
-  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects] = await Promise.all([
+  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects] = await Promise.all([
     supabase.from('takes')
       .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
       .order('due_date', { ascending: true, nullsFirst: false }),
@@ -975,13 +1035,15 @@ async function refresh() {
     optionalRows(supabase.from('funding_items').select('id, stage_id, name, quote, status, notes'), 'funding items'),
     optionalRows(supabase.from('contributions').select('id, project_id, amount, repayment'), 'contributions'),
     optionalRows(supabase.from('projects').select('id, name, status, release_date, summary, songs'), 'projects'),
+    // Every GRYSKLL project, so the whole crew sees what's in the pipeline.
+    optionalRows(supabase.from('project_index').select('id, name, status, type, release_date, show_in_gryce, song_count, released_count'), 'all projects'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
 
   pendingByItem = new Map(updates.map((u) => [`${u.item_type}:${u.item_id}`, u]));
   current = {
-    takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects,
+    takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects, allProjects,
     songs: collectSongs(creditsRes.data, takesRes.data),
   };
   await Promise.all([loadIsrc(), loadLeadership()]);

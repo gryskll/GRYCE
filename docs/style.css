@@ -293,3 +293,13 @@ a.help-button:hover { text-decoration: none; }
 }
 .group > .takes, .group > .songs { margin-top: 6px; }
 .group > p.small { margin: 0 0 6px; }
+
+/* v0.4.13: section cards that jump down the page */
+.tiles.jump { grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.tiles.jump .tile {
+  aspect-ratio: auto; min-height: 92px; padding: 12px; font: inherit; text-align: left; cursor: pointer;
+}
+.tiles.jump .tile-count { font-size: 28px; }
+.tiles.jump .tile-title { font-size: 14px; }
+.tiles.jump .tile-sub { font-size: 12px; }
+@media (max-width: 360px) { .tiles.jump { grid-template-columns: repeat(2, 1fr); } }

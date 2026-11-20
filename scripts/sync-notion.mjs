@@ -596,8 +596,8 @@ const projects = !PROJECTS_DS ? null : await optional('projects', async () => {
   }));
 });
 
-// Every project, for Leadership's Projects page. Names, status, type, dates and
-// song counts only. Leadership-only in Supabase.
+// Every project, so the whole crew sees what's in the pipeline. Names, status,
+// type, dates and song counts only.
 const projectIndex = !PROJECTS_DS ? null : await optional('project index', async () => {
   const pages = await queryAll(PROJECTS_DS);
   return pages.map((p) => {
