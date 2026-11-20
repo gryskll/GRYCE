@@ -4,6 +4,24 @@ This is the guide for anyone picking up gryCE: how it's put together, where each
 
 gryCE is the GRYSKLL Creative Engine, the member portal for the GRYSKLL crew. It's built and maintained by BetweenKeys. Version numbers stay under 1.0 while it's in development.
 
+## Kicking the tires
+
+You don't need an account, keys or crew data for any of this. Reviewers don't get a live login, because every linked login sees real crew news, funding amounts and project plans.
+
+1. **Clone it.** `git clone https://github.com/gryskll/gryce`
+2. **Click through the site with made-up data.** From the repo root run `python3 -m http.server 8000` and open `http://localhost:8000/dev/preview.html`. The bar in the corner switches who you are: member, Leadership, ISRC Admin, Support, or mid View as. `dev/demo.js` stands in for Supabase, and the real `docs/app.js` runs on top of it. Sign-in and saving don't do anything there.
+3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 33 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
+4. **Read in this order:** this file, `supabase/migrations/v4-6-view-as.sql` (the access model in one place), `scripts/sync-notion.mjs`, then `docs/app.js`.
+
+### Where we'd like eyes
+
+- **Access rules.** Anything a member can read or write that they shouldn't. The database is the only gate.
+- **The sync.** Failure handling, Notion rate limits, and the stale-row deletes.
+- **`app.js` structure.** How you'd split it without adding a build step.
+- **Hosting.** Moving the static site off GitHub Pages (Cloudflare is the likely next home) and what that changes.
+
+Open an issue or a pull request. Keep crew names, emails and amounts out of both: the repo is public.
+
 ## The shape of it
 
 ```
@@ -61,9 +79,10 @@ Keep the Notion workspace at one member. A Free workspace with a second member h
 
 Access is decided in Supabase, not in the site. The site just asks for rows and gets what RLS allows.
 
-- `private.current_artist_id()` matches the signed-in Google email to `artists.email`. No match means no data.
+- `private.signed_in_artist_id()` matches the signed-in Google email to `artists.email`. No match means no data.
+- `private.current_artist_id()` is whose rows to show. It's the signed-in member, or the member being viewed during View as (below). Every policy uses it.
 - `private.is_leadership()` and `private.is_isrc_admin()` read checkboxes synced from Artists.
-- Three functions share a little more than RLS would, on purpose:
+- A few functions share a little more than RLS would, on purpose:
   - `issue_isrc(song, kind)`: ISRC Admins only. Locks, picks the next `QT-3ZB-YY-NNNNN`, refuses duplicates.
   - `leadership_contributions()`: Leadership only. Every contribution with names.
   - `group_effort_takes()`: everyone signed in. Who, song and status for deliverables linked to a crew task.
@@ -97,18 +116,21 @@ Newer tables and columns are optional: if one is missing, the sync logs "Skipped
 
 ### Previewing without signing in
 
-There's no test suite yet. To check a view before shipping, copy `docs/` to a scratch folder, stub the Supabase import at the top of `app.js`, cut everything from `const { data: { session } }` down, set `me` and `current` to sample data, set `location.hash`, and call `draw()`. Then screenshot it with headless Chrome at 390px wide. Never commit that harness or its sample data.
+Use `dev/preview.html` (see Kicking the tires). When a release adds a table, column or function the site reads, add made-up rows for it to `dev/demo.js` in the same release so the preview keeps working. Everything in `dev/` is invented: never put real crew data there. Check screens at 390px wide, since most of the crew is on a phone.
+
+`docs/app.js` uses the demo only when `window.gryceDemo` is set, which only `dev/preview.html` does. `dev/` isn't under `docs/`, so the live site never serves it.
 
 ## Shipping a change
 
 1. Branch from the latest `main`. Don't stack branches.
 2. Bump `docs/version.js`: the last number for fixes and polish (0.4.17 → 0.4.18).
 3. Add a `CHANGELOG.md` entry in plain words.
-4. Database changes go in a new `supabase/migrations/vX-Y-name.sql`. Make it safe to run twice (`if not exists`, `create or replace`, drop then create policies). Add steps to the matching `V*-SETUP.md`.
-5. Open a pull request, one release per PR. Merge with squash.
-6. Run the SQL in Supabase (SQL Editor) if there is any.
-7. Run the sync by hand: Actions → Sync Notion to Supabase → Run workflow. Check the last log line.
-8. GitHub Pages updates in a minute or two. The footer shows the new version.
+4. Database changes go in a new `supabase/migrations/vX-Y-name.sql`. Make it safe to run twice (`if not exists`, `create or replace`, drop then create policies). Add steps to the matching `V*-SETUP.md`, and add checks to `dev/tests.sql` for any rule it changes.
+5. Run `dev/test-db.sh` and click through `dev/preview.html`.
+6. Open a pull request, one release per PR. The Tests workflow must pass. Merge with squash.
+7. Run the SQL in Supabase (SQL Editor) if there is any. Database changes are shown to Shaah and applied only after a yes.
+8. Run the sync by hand: Actions → Sync Notion to Supabase → Run workflow. Check the last log line.
+9. GitHub Pages updates in a minute or two. The footer shows the new version.
 
 Decisions go in the gryCE Master Reference as suggestions, with a Decision Log entry.
 
@@ -122,7 +144,7 @@ Decisions go in the gryCE Master Reference as suggestions, with a Decision Log e
 
 Known debt, roughly in order of payoff:
 
-1. **No tests.** Start with the sync's property mapping and `issue_isrc()`, then the views.
+1. **Tests cover the database only.** `dev/tests.sql` checks access rules, ISRC numbering and View as. Next: the sync's Notion-to-row mapping (feed it saved Notion responses), then the views (render `dev/preview.html` in a headless browser).
 2. **`app.js` is one big file.** Split by section (owe, crew, projects, leadership, isrc) into modules. No build step is needed, since browsers load ES modules directly.
 3. **Wording lives inside the code.** Move member-facing text into one file so it can be edited without touching logic.
 4. **`schema.sql` stops at V3.** A new install has to run every migration in order. Fold the migrations into a fresh `schema.sql` at the next major version.

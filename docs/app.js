@@ -1,3 +1,10 @@
+// gryCE member portal: the whole site in one module.
+// Flow: sign in with Google (Supabase Auth) -> load the member's artist row ->
+// refresh() loads everything they're allowed to see in one go -> draw() renders
+// the view named in location.hash. The database (row level security) decides
+// what comes back; this file only lays it out. Sections are marked "// Name ----".
+// See DEVELOPERS.md for the map, and dev/preview.html to run it with made-up data.
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
 import { helpView } from './help-full.js';
@@ -35,7 +42,10 @@ if (SUPABASE_URL.startsWith('REPLACE') || SUPABASE_PUBLISHABLE_KEY.startsWith('R
   throw new Error('gryCE config not set');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Demo mode: dev/preview.html sets window.gryceDemo to a fake client with
+// made-up data, so developers can click through gryCE without an account.
+// The live site never sets it, so this is always the real client there.
+const supabase = window.gryceDemo?.client ?? createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true },
 });
 

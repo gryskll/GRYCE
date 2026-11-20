@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>gryCE demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="../docs/img/favicon.png">
+  <link rel="apple-touch-icon" href="../docs/img/apple-touch-icon.png">
+  <meta name="theme-color" content="#0d0d0f">
+  <link rel="stylesheet" href="../docs/style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand"><img class="brand-mark" src="../docs/img/skull-green.png" alt="" width="28" height="39"><span>gry<span class="ce">CE</span></span></div>
+    <div class="who" id="who" hidden>
+      <span id="who-name"></span>
+      <button class="link" id="sign-out" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <p class="muted">Loading…</p>
+  </main>
+
+  <footer class="foot">
+    <a href="https://gryskll.com">GRYSKLL</a>
+    <a href="https://gryskll.com/privacy">Privacy</a>
+    <a href="#help" id="help-link">Help</a>
+    <span class="version">gryCE</span>
+    <span class="credit">Designed <a href="https://betweenkeys.org" target="_blank" rel="noopener">BetweenKeys</a></span>
+  </footer>
+
+  <!-- Demo: dev/demo.js stands in for Supabase, then the real app runs. See DEVELOPERS.md. -->
+  <nav class="demo-switch" style="position:fixed;bottom:8px;right:8px;z-index:9;font:12px Inter,sans-serif;background:#000c;padding:6px 8px;border-radius:8px">
+    Demo as:
+    <a href="?as=member">member</a> · <a href="?as=leadership">leadership</a> · <a href="?as=isrc">ISRC</a> ·
+    <a href="?as=support">support</a> · <a href="?as=viewing">viewing as</a>
+  </nav>
+  <script src="../docs/version.js"></script>
+  <script type="module">
+    import './demo.js';
+    await import('../docs/app.js');
+  </script>
+</body>
+</html>

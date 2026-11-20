@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.20, November 20, 2026
+- For developers: a demo preview (`dev/preview.html`) that runs gryCE with made-up data and no account, 33 database checks that run on every pull request, and a refreshed DEVELOPERS.md with a Kicking the tires section. Nothing changes for members.
+
 ## v0.4.19, November 20, 2026
 - View as, for Support: Shaah and Q can see gryCE exactly as a member sees it, to help them. It's read only, ends after 30 minutes, and every view is logged for Leadership. A banner shows who you're viewing as, with an Exit button.
 - Notion: a Support checkbox on Artists decides who can use it.

@@ -1,15 +1,16 @@
 // Syncs gryCE between Notion and Supabase.
 // Runs in GitHub Actions on a schedule. No dependencies, Node 20+.
+// Deliverables live in the Supabase table `takes` (their old name), so the code says takes.
 //
 // Order on every run:
-//   1. Push: send members' pending updates (takes, tasks) and newly issued ISRC codes
+//   1. Push: send members' pending updates (deliverables, tasks) and newly issued ISRC codes
 //      (Songs) to Notion. Needs NOTION_WRITE_TOKEN.
 //   2. Pull: copy Notion into Supabase and delete rows that are gone from Notion.
 //   3. Write back: put "Acknowledged by" on each announcement in Notion. Needs NOTION_WRITE_TOKEN.
 //
 // Env:
 //   NOTION_TOKEN         gryCE Sync connection token (read only)
-//   NOTION_WRITE_TOKEN   gryCE Write connection token (edit Takes, Tasks, Announcements, Songs). Optional.
+//   NOTION_WRITE_TOKEN   gryCE Write connection token (edit Deliverables, Tasks, Announcements, Songs). Optional.
 //   SUPABASE_URL         https://<project-ref>.supabase.co
 //   SUPABASE_SECRET_KEY  Supabase secret key (or legacy service_role key)
 
