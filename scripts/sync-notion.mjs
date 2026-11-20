@@ -425,6 +425,11 @@ const tasks = !TASKS_DB ? null : await optional('tasks', async () => {
       due_date: firstDate(p, TASK_PROPS.due),
       assignee_ids: (await relation(p, TASK_PROPS.assignee)).filter((id) => artistIds.has(id)),
       is_crew: select(p.properties[TASK_PROPS.owner]) === TASK_PROPS.crewOwner,
+      // Group effort: the takes this crew task depends on. gryCE Note is the
+      // crew-facing line. Notes stays private and is never synced.
+      linked_take_ids: await relation(p, 'Linked Takes'),
+      gryce_note: text(p.properties['gryCE Note']),
+      link: url(p.properties['Link']),
       synced_at: runStart,
     });
   }

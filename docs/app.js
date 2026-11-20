@@ -355,9 +355,49 @@ function newsView(d) {
 
 const crewTasksOf = (d) => d.tasks.filter((k) => k.is_crew && !(k.assignee_ids ?? []).includes(me.id));
 
+// Group effort: a crew task linked to the takes it depends on. Leads with
+// progress and who's in, then who's still to go, in amber, never red.
+const IN_STATUSES = ['Submitted', 'Accepted'];
+function effortCard(k, takes) {
+  const mine = takes.filter((t) => t.task_id === k.id && t.status !== 'Not used');
+  const done = mine.filter((t) => IN_STATUSES.includes(t.status));
+  const toGo = mine.filter((t) => !IN_STATUSES.includes(t.status));
+  const pct = mine.length ? Math.round((done.length / mine.length) * 100) : 0;
+  const byPerson = (list) => {
+    const m = new Map();
+    for (const t of list) {
+      const who = t.who ?? 'Someone';
+      if (!m.has(who)) m.set(who, []);
+      m.get(who).push(t.song ?? t.type ?? 'Take');
+    }
+    return [...m].sort((a, b) => a[0].localeCompare(b[0]));
+  };
+  const link = safeUrl(k.link);
+  return group(toGo.length === 0 && mine.length ? 'green' : 'blue', k.name, groupCount(`${done.length}/${mine.length}`),
+    k.gryce_note && el('p', { class: 'small' }, k.gryce_note),
+    link && el('p', { class: 'small' }, el('a', { href: link, target: '_blank', rel: 'noopener' }, 'Open the link')),
+    el('p', { class: 'effort-line' },
+      toGo.length === 0 && mine.length
+        ? 'All in. Thank you, crew.'
+        : `${done.length} of ${mine.length} in. ${toGo.length === 1 ? 'One to go.' : `${toGo.length} to go.`}`),
+    el('div', { class: 'meter', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct) },
+      el('span', { style: `width: ${pct}%` })),
+    done.length > 0 && group('green', 'In, thank you', groupCount(done.length),
+      el('p', { class: 'small' }, byPerson(done).map(([who]) => who).join(', '))),
+    toGo.length > 0 && group('amber', 'Still to go', groupCount(toGo.length),
+      el('p', { class: 'small muted' }, 'If you know these folks, check in and see if they need a hand.'),
+      el('ul', { class: 'takes' }, byPerson(toGo).map(([who, songs]) => el('li', { class: 'take' },
+        el('div', { class: 'take-main' },
+          el('span', { class: 'take-song' }, who),
+          el('span', { class: 'take-name' }, songs.join(', '))))))));
+}
+
 function crewView(d) {
   const crew = crewTasksOf(d);
-  const open = crew.filter(isOpenTask).sort(byDue);
+  // Crew tasks with linked takes are group efforts and get their own card.
+  const efforts = crew.filter((k) => (k.linked_take_ids ?? []).length > 0 && isOpenTask(k));
+  const effortIds = new Set(efforts.map((k) => k.id));
+  const open = crew.filter(isOpenTask).filter((k) => !effortIds.has(k.id)).sort(byDue);
   const done = crew.filter((k) => !isOpenTask(k));
   const late = open.filter((k) => isPast(k.due_date));
   const notLate = open.filter((k) => !isPast(k.due_date));
@@ -366,7 +406,11 @@ function crewView(d) {
   const otherOpen = notLate.filter((k) => !known.includes(k.status ?? 'Not started'));
   const g = (tone, title, list) => list.length > 0 && group(tone, title, groupCount(list.length),
     el('ul', { class: 'takes' }, list.map((k) => taskRow(k, false))));
-  return panel('Crew tasks', countTag(open.length),
+  return [
+    efforts.length > 0 && panel(efforts.length === 1 ? 'Group effort' : 'Group efforts', countTag(efforts.length, true),
+      el('p', { class: 'small muted' }, 'Things the whole crew is finishing together. Everyone can see where they stand.'),
+      efforts.map((k) => effortCard(k, d.effortTakes ?? []))),
+    panel('Crew tasks', countTag(open.length),
     open.length === 0 && el('p', { class: 'muted' }, 'No crew tasks open right now.'),
     g('red', 'Overdue', late),
     g('blue', 'In progress', byStatus('In progress')),
@@ -376,7 +420,8 @@ function crewView(d) {
     done.length > 0 && group('green', 'Done', groupCount(done.length),
       el('details', {},
         el('summary', {}, 'Show finished tasks'),
-        el('ul', { class: 'takes' }, done.map((k) => taskRow(k, false))))));
+        el('ul', { class: 'takes' }, done.map((k) => taskRow(k, false)))))),
+  ];
 }
 
 // Project updates: where each active project stands, songs and funding --------
@@ -1085,12 +1130,12 @@ async function loadLeadership() {
 }
 
 async function refresh() {
-  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects] = await Promise.all([
+  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects, effortTakes] = await Promise.all([
     supabase.from('takes')
       .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
       .order('due_date', { ascending: true, nullsFirst: false }),
     supabase.from('song_credits').select(`role, song:songs(${SONG_FIELDS})`),
-    optionalRows(supabase.from('tasks').select('id, name, status, due_date, assignee_ids, is_crew'), 'tasks'),
+    optionalRows(supabase.from('tasks').select('*'), 'tasks'),
     optionalRows(supabase.from('announcements').select('*'), 'announcements'),
     optionalRows(supabase.from('announcement_acks').select('announcement_id, acknowledged_at'), 'acknowledgements'),
     optionalRows(supabase.from('member_updates')
@@ -1103,13 +1148,14 @@ async function refresh() {
     optionalRows(supabase.from('projects').select('id, name, status, release_date, summary, songs'), 'projects'),
     // Every GRYSKLL project, so the whole crew sees what's in the pipeline.
     optionalRows(supabase.from('project_index').select('*'), 'all projects'),
+    optionalRows(supabase.rpc('group_effort_takes'), 'group efforts'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
 
   pendingByItem = new Map(updates.map((u) => [`${u.item_type}:${u.item_id}`, u]));
   current = {
-    takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects, allProjects,
+    takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects, allProjects, effortTakes,
     songs: collectSongs(creditsRes.data, takesRes.data),
   };
   await Promise.all([loadIsrc(), loadLeadership()]);

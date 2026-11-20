@@ -44,6 +44,7 @@ const HELP = `
       <h2>Crew news and tasks</h2>
       <p><strong>Crew news</strong> shows the newest announcements first. Tap <strong>Acknowledge</strong> so Shaah knows you saw it. New ones are at the top. Read ones fold away at the bottom.</p>
       <p><strong>Crew tasks</strong> are jobs for the whole crew. Anyone can see them. Only the person a task is assigned to can mark it done, and tasks assigned to you show under What you owe. Tasks are grouped by where they stand: Overdue, In progress, Waiting on someone and Not started.</p>
+      <p><strong>Group efforts</strong> sit at the top of Crew tasks. They're things the whole crew is finishing together, like getting everyone's lyrics in. Each one shows how many are in, thanks the people who are done, and lists who's still to go. If you know someone on that list, check in and see if they need a hand. Your own part shows under What you owe, where you mark it submitted.</p>
     </section>
 <section class="card">
       <h2>Projects</h2>
