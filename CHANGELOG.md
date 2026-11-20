@@ -2,6 +2,11 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.17, November 20, 2026
+- Group efforts: a crew task can link to the takes it depends on. Crew tasks shows a Group effort card with a progress bar, who's in (with a thank-you) and who's still to go, so the crew can check in on each other.
+- First group effort: Lyrics for The Listening Study, Session 2.
+- Crew tasks can carry a short note and a link for the crew (gryCE Note and Link in Notion). The Notes field stays private.
+
 ## v0.4.16, November 20, 2026
 - Fixed: opening the active project from its card showed "[object HTMLElement]" instead of its card. It now shows "Where it stands": outstanding, songs and funding.
 

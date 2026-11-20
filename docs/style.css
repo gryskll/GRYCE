@@ -310,3 +310,6 @@ a.help-button:hover { text-decoration: none; }
 .tiles.cards .tile-count { font-size: 32px; }
 .tiles.cards .tile-title { font-size: 15px; }
 .tile-flag { align-self: flex-start; margin-top: 4px; }
+
+/* v0.4.17: group efforts */
+.effort-line { margin: 8px 0 0; font-weight: 700; }

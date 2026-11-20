@@ -79,3 +79,14 @@ Reconnect Claude's Supabase connector scoped and read-only. That's a task in GRY
 ## v0.4.14: Leadership Only projects
 
 Music Projects has a **Leadership Only** checkbox. Tick it while a project is still being sorted out. Only Leadership sees it in gryCE, with a Leadership only tag, until it's unticked. The SQL is at the end of `v4-3-project-index.sql` (applied November 20).
+
+## v0.4.17: group efforts
+
+**SQL:** `supabase/migrations/v4-4-group-efforts.sql` (applied November 20).
+
+To start a group effort in Notion:
+1. Make a GRYSKLL Tasks row with **Owner: Crew**.
+2. Fill **Linked Takes** with every take it depends on, one per person per song.
+3. Optional: **gryCE Note** (one or two lines the crew sees) and **Link**. **Notes** stays private.
+
+gryCE shows it at the top of Crew tasks with progress, who's in and who's still to go. Takes count as in once they're Submitted or Accepted. Mark the task Done in Notion when it's finished.
