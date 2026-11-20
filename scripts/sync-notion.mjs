@@ -357,6 +357,7 @@ const artists = artistPages.map((p) => ({
   leadership: p.properties['Leadership']?.checkbox === true,
   isrc_admin: p.properties['ISRC Admin']?.checkbox === true,
   also_known_as: text(p.properties['Also Known As']),
+  support: p.properties['Support']?.checkbox === true,
   synced_at: runStart,
 }));
 const artistIds = new Set(artists.map((a) => a.id));
@@ -643,7 +644,7 @@ const documents = !DOCUMENTS_DB ? null : await optional('documents', async () =>
 });
 
 // v0.4.1 columns may not exist yet. If the first save fails, save again without them.
-const V041_ARTIST = ['leadership', 'isrc_admin', 'also_known_as'];
+const V041_ARTIST = ['leadership', 'isrc_admin', 'also_known_as', 'support'];
 const V041_SONG = ['isrc', 'isrc_reissue'];
 const without = (rows, keys) => rows.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => !keys.includes(k))));
 async function upsertNewCols(table, rows, cols) {

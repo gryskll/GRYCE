@@ -2,6 +2,11 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.19, November 20, 2026
+- View as, for Support: Shaah and Q can see gryCE exactly as a member sees it, to help them. It's read only, ends after 30 minutes, and every view is logged for Leadership. A banner shows who you're viewing as, with an Exit button.
+- Notion: a Support checkbox on Artists decides who can use it.
+- Help: a Support section, and a line in Who sees what so every member knows.
+
 ## v0.4.18, November 20, 2026
 - Takes are now called Deliverables, since beats, stems, lyrics, mixes and artwork aren't takes. "You owe a take" is now "You owe something".
 - Notion: the Takes database is now Deliverables. Its relations are Deliverables (Songs), Deliverables Owed (Artists), Linked Deliverables (Tasks) and Group Effort Task.

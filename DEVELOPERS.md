@@ -68,6 +68,8 @@ Access is decided in Supabase, not in the site. The site just asks for rows and 
   - `leadership_contributions()`: Leadership only. Every contribution with names.
   - `group_effort_takes()`: everyone signed in. Who, song and status for deliverables linked to a crew task.
 
+**View as (Support).** `private.current_artist_id()` returns the member being viewed while a Support member has an open session in `view_as_sessions`, so every rule above applies unchanged. `private.signed_in_artist_id()` is always the real person. Writes check `private.viewing_as() is null`. Any new write path (insert policy or function that changes data) must add the same check. Sessions are started and ended only through `start_view_as()` and `stop_view_as()`, end after 30 minutes, and stay in the table as the log.
+
 The site hides Leadership and ISRC pages from people without the flag, but that's only for tidiness. The database is what actually protects the data.
 
 ## The sync, step by step
@@ -86,7 +88,7 @@ Newer tables and columns are optional: if one is missing, the sync logs "Skipped
 - `docs/app.js`: everything else, about 1,200 lines. Sections are marked with `// Name ----` comments.
   - `el(tag, attrs, ...children)` builds DOM. Falsy children are skipped and arrays are flattened one level, so `cond && el(...)` is the usual pattern. Nested arrays two levels deep print as text. This has caused bugs twice, so spread or `.flat()` them.
   - `refresh()` loads everything once after sign-in into `current`. `draw()` renders the view for `location.hash`.
-  - Routes: `#owe`, `#news`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
+  - Routes: `#support`, `#owe`, `#news`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
   - Building blocks: `panel()` (a card), `group(tone, title, right, ...body)` (a colored box inside a card), `tile()` (Home and section cards), `jumpCards()` (cards that scroll to a group).
   - Tones are green (done, money in), amber (waiting on you), orange (wants input), blue (tasks, songs, drafts), red (owed or holding things up) and gray. Use them the same way everywhere.
 - `docs/help-full.js`: the member guide inside gryCE. Update it in the same release as any change members will see.
