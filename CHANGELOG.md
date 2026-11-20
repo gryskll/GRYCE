@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.15, November 20, 2026
+- Projects is a page of cards, one per project: Active first, then grouped by status. Each card shows how many songs it has.
+- Tap a project card to open it and see its songs, grouped by stage. The active project's page also has its full card: what's outstanding, the songs and funding.
+
 ## v0.4.14, November 20, 2026
 - Funding: under All stages, each stage is its own colored box. Done stages are green, the open stage amber, and stages not started yet gray.
 - Projects: a project ticked Leadership Only in Notion shows only to Leadership while it's being sorted out. Leadership sees a Leadership only tag on it.

@@ -34,3 +34,7 @@ drop policy if exists "members see all projects" on public.project_index;
 create policy "members see all projects" on public.project_index
   for select to authenticated
   using (private.current_artist_id() is not null and (not leadership_only or private.is_leadership()));
+
+-- v0.4.15: project cards open to a page with the project's songs.
+alter table public.project_index add column if not exists description text;
+alter table public.project_index add column if not exists songs jsonb not null default '[]'::jsonb;  -- [{name, stage, released}]
