@@ -16,7 +16,7 @@ GRYSKLL Creative Engine. A member portal: crew members sign in with Google and s
 
 ## Version
 
-The version shows in the footer of every page, including sign-in. It lives in one place, `docs/version.js`, which every page reads. V1 was 0.1, V2 was 0.2, and V3 is 0.3. Fixes and polish bump the last number (0.3.1, 0.3.2). It stays under 1.0 while gryCE is in development. Bump it with every release.
+The version shows in the footer of every page, including sign-in. It lives in one place, `docs/version.js`, which every page reads. V1 was 0.1, V2 was 0.2, V3 was 0.3, and V4 is 0.4. Fixes and features bump the last number (0.4.18, 0.4.19). It stays under 1.0 while gryCE is in development. Bump it with every release.
 
 ## Access
 
@@ -29,13 +29,13 @@ A member can see their page when their Google sign-in email is in the **Email** 
 - The full guide is kept out of the public page, not locked. Anyone who reads the site's code could still find it, so nothing private goes in it.
 - When a release changes what members see, update the full guide in the same release.
 
-Members never edit synced tables. The one exception to "Notion is the source of truth" is ISRC numbering: `issue_isrc()` in Supabase hands out codes so two people can never get the same one, and the sync writes each new code to the song in Notion.
+The one exception to "Notion is the source of truth" is ISRC numbering: `issue_isrc()` in Supabase hands out codes so two people can never get the same one, and the sync writes each new code to the song in Notion.
 
 Members never edit synced tables. Updates go into `member_updates` (insert only, own open items only, never Accepted). Acknowledgements go into `announcement_acks`, which the sync never deletes.
 
 ## Setup checklist
 
-1. Run `supabase/schema.sql` in the Supabase SQL Editor, then `supabase/migrations/v4-1-isrc-leadership.sql`. For an existing V1 project, run the files in `supabase/migrations/` in order instead. v0.4.1 steps are in `V4-SETUP.md`.
+1. Run `supabase/schema.sql` in the Supabase SQL Editor, then every file in `supabase/migrations/` from v4-1 on, in order (the earlier ones are already in schema.sql, and re-running them is harmless). Release-by-release notes are in `V4-SETUP.md`.
 2. Repo secrets (Settings → Secrets and variables → Actions):
    - `NOTION_TOKEN`: gryCE Sync connection token
    - `SUPABASE_URL`: Supabase project URL
@@ -48,14 +48,16 @@ Members never edit synced tables. Updates go into `member_updates` (insert only,
 
 | Path | What it is |
 | --- | --- |
-| `supabase/schema.sql` | Tables, access rules, grants (V1 + V2 + V3) |
-| `supabase/migrations/` | V2 and V3 changes, one file per step |
+| `supabase/schema.sql` | The starting point (V1 to V3): tables, access rules, grants |
+| `supabase/migrations/` | Every change since V1, one file per step, run in order |
 | `V2-SETUP.md` | V2 setup steps and click paths |
 | `V3-SETUP.md` | V3 funding setup steps |
 | `scripts/sync-notion.mjs` | Push member updates, Notion → Supabase sync, write-back. No dependencies |
 | `.github/workflows/sync-notion.yml` | Runs the sync on a schedule |
 | `CHANGELOG.md` | What changed in each release |
 | `DEVELOPERS.md` | Guide for developers picking up gryCE |
+| `dev/` | Demo preview with made-up data, and the database tests. Not served on the site |
+| `.github/workflows/test.yml` | Runs the database tests on every pull request |
 | `docs/` | The member portal |
 | `docs/help.html` | Public sign-in help |
 | `docs/help-full.js` | Full member guide, shown inside gryCE |
