@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.16, November 20, 2026
+- Fixed: opening the active project from its card showed "[object HTMLElement]" instead of its card. It now shows "Where it stands": outstanding, songs and funding.
+
 ## v0.4.15, November 20, 2026
 - Projects is a page of cards, one per project: Active first, then grouped by status. Each card shows how many songs it has.
 - Tap a project card to open it and see its songs, grouped by stage. The active project's page also has its full card: what's outstanding, the songs and funding.
