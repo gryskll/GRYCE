@@ -68,10 +68,10 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Leadership</h2>
-      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile with three parts:</p>
+      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on three section cards. Tap one to open it, and <strong>‹ Leadership</strong> brings you back.</p>
       <ul>
-        <li><strong>Waiting on Leadership:</strong> documents that need you right now.</li>
-        <li><strong>Document registry:</strong> every other GRY-DOC number with its link, grouped by status: Draft, Approved and Reserved.</li>
+        <li><strong>Documents:</strong> what's waiting on Leadership right now, then every other GRY-DOC number with its link, grouped by status: Draft, Approved and Reserved.</li>
+        <li><strong>Projects:</strong> the active project at the top with its full card, then every other GRYSKLL project grouped by status, with song counts and dates.</li>
         <li><strong>Contributions:</strong> every payment toward a project and who made it, grouped by project, then funding stage, then contributor type (Crew, Crewmunity, Family loan). Money that came in before a campaign started shows first, under <strong>Before the album</strong>. Each group shows what's come in and what's still owed back.</li>
       </ul>
       <p>Every contribution is tied to a person, a crew member or a supporter, so Leadership can follow up with updates, thank-yous and gifts. Supporters' contact details stay in GRYSKLL's records and never show in gryCE. A contribution not tied to anyone yet gets an amber <strong>Link to a person in Notion</strong> tag.</p>

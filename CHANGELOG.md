@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.13, November 20, 2026
+- Leadership opens on three section cards, like Home: Documents, Contributions and Projects. Each opens its own page.
+- Projects shows the active project at the top with its full card, then every other project grouped by status.
+
 ## v0.4.12, November 20, 2026
 - The footer credit reads "Designed BetweenKeys", with BetweenKeys linking to betweenkeys.org.
 

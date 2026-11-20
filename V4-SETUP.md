@@ -71,3 +71,7 @@ Reconnect Claude's Supabase connector scoped and read-only. That's a task in GRY
 - **Supporters** lives on the GRYSCO Leadership page: people who back GRYSKLL but aren't artists (Crewmunity, family, friends), with contact details, last thank-you and gifts sent. It never syncs to gryCE.
 - Every Contributions row links to an **Artist** (crew) or a **Supporter** (everyone else). Name the row after the person.
 - gryCE shows each contributor's name in the Leadership section. A row linked to nobody gets a "Link to a person in Notion" tag.
+
+## v0.4.13: Leadership section cards and every project
+
+**SQL:** `supabase/migrations/v4-3-project-index.sql`. Adds `project_index`, every Music Project (name, status, type, release date, song counts), Leadership only. Members still see only Show in gryCE projects.

@@ -722,7 +722,7 @@ const DOC_SECTIONS = [
   ['Retired', 'gray', 'No longer in force.'],
 ];
 
-function leadershipView(d) {
+function leadershipParts(d) {
   const docs = [...(d.leadership?.documents ?? [])].sort((a, b) => a.number.localeCompare(b.number));
   const contribs = d.leadership?.contributions ?? [];
   const toReview = docsWaiting(d);
@@ -770,12 +770,12 @@ function leadershipView(d) {
     .sort((a, b) => a[0].localeCompare(b[0]));
 
   const rest = docs.filter((x) => !DOC_WAITING.includes(x.status));
-  return [
-    panel('Waiting on Leadership', countTag(waiting, waiting > 0),
+  return {
+    waiting: panel('Waiting on Leadership', countTag(waiting, waiting > 0),
       waiting
         ? docGroups(toReview)
         : el('p', { class: 'muted' }, 'No documents waiting on Leadership.')),
-    panel('Document registry', countTag(docs.length),
+    registry: panel('Document registry', countTag(docs.length),
       rest.length === 0 && el('p', { class: 'muted' }, 'Nothing else in the registry yet.'),
       DOC_SECTIONS.map(([status, tone, blurb]) => {
         const list = rest.filter((x) => (x.status ?? 'Draft') === status);
@@ -787,7 +787,7 @@ function leadershipView(d) {
         const other = rest.filter((x) => !DOC_SECTIONS.some(([st]) => st === (x.status ?? 'Draft')));
         return other.length > 0 && group('gray', 'Other', groupCount(other.length), el('ul', { class: 'takes' }, other.map(docRow)));
       })()),
-    panel('Contributions', countTag(contribs.length),
+    contributions: panel('Contributions', countTag(contribs.length),
       el('p', { class: 'small muted' }, 'Everyone’s contributions. Only Leadership sees this. Members see only their own.'),
       contribs.length === 0 && el('p', { class: 'muted' }, 'No contributions yet.'),
       byProject.map(([project, list]) => el('div', { class: 'block' },
@@ -800,6 +800,61 @@ function leadershipView(d) {
             const n = stageNo.get(`${project}|${stage}`);
             return stageBlock(project)([n && n !== 99 ? `Stage ${n}, ${stage}` : stage, sl]);
           })))),
+  };
+}
+
+// Leadership hub: section cards, each opening its own page.
+function leadershipView(d) {
+  const waiting = docsWaiting(d).length;
+  const contribs = d.leadership?.contributions ?? [];
+  const total = contribs.reduce((n, c) => n + (Number(c.amount) || 0), 0);
+  const all = d.leadership?.projects ?? [];
+  const active = projectsOf(d).length;
+  return el('div', { class: 'tiles' },
+    tile('leadership/documents', 'Documents', String(waiting),
+      waiting ? 'Waiting on Leadership' : `${(d.leadership?.documents ?? []).length} in the registry`,
+      waiting ? 'hot' : null),
+    tile('leadership/contributions', 'Contributions', String(contribs.length), `${money(total)} from ${new Set(contribs.map((c) => c.contributor_name ?? c.artist_name)).size} people`),
+    tile('leadership/projects', 'Projects', String(all.length || active), active === 1 ? '1 active' : `${active} active`));
+}
+const leadDocsView = (d) => { const x = leadershipParts(d); return [x.waiting, x.registry]; };
+const leadContribView = (d) => leadershipParts(d).contributions;
+
+// Every project: the active one (Show in gryCE) at the top with its full card,
+// then the rest grouped by status.
+const PROJECT_SECTIONS = [
+  ['In Production', 'blue'],
+  ['Mixing & Mastering', 'orange'],
+  ['Planning', 'amber'],
+  ['Concept', 'gray'],
+  ['Released', 'green'],
+];
+function leadProjectsView(d) {
+  const activeIds = new Set(projectsOf(d).map((p) => p.id));
+  const others = (d.leadership?.projects ?? []).filter((p) => !activeIds.has(p.id))
+    .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
+  const row = (p) => el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, p.name),
+      p.song_count > 0 && el('span', { class: 'take-name' }, `${p.song_count} song${p.song_count === 1 ? '' : 's'}${p.released_count ? `, ${p.released_count} out` : ''}`)),
+    el('div', { class: 'take-meta' },
+      p.type && el('span', { class: 'tag' }, p.type),
+      p.release_date && el('span', { class: 'muted' }, `${p.status === 'Released' ? 'Released' : 'Target'} ${fmtDate(p.release_date)}`)));
+  const known = new Set(PROJECT_SECTIONS.map(([st]) => st));
+  return [
+    el('p', { class: 'eyebrow' }, 'Active'),
+    ...[projectsView(d)].flat(),
+    others.length > 0 && panel('Other projects', countTag(others.length),
+      PROJECT_SECTIONS.map(([status, tone]) => {
+        const list = others.filter((p) => p.status === status);
+        return list.length > 0 && group(tone, status, groupCount(list.length), el('ul', { class: 'takes' }, list.map(row)));
+      }),
+      (() => {
+        const list = others.filter((p) => !known.has(p.status));
+        return list.length > 0 && group('gray', 'No status', groupCount(list.length), el('ul', { class: 'takes' }, list.map(row)));
+      })()),
+    others.length === 0 && (d.leadership?.projects ?? []).length === 0
+      && panel('Other projects', null, el('p', { class: 'muted' }, 'The full project list shows after the next sync.')),
   ];
 }
 
@@ -843,10 +898,11 @@ function homeView(d) {
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
 
-const VIEWS = { owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
-const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership' };
+const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, 'leadership/projects': leadProjectsView, owe: oweView, news: newsView, crew: crewView, projects: projectsView, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Project updates', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership',
+  'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions', 'leadership/projects': 'Projects' };
 // Sections only some members get. Anyone else who types the address lands on Home.
-const allowed = (key) => (key === 'isrc' ? me?.isrc_admin : key === 'leadership' ? me?.leadership : true);
+const allowed = (key) => (key === 'isrc' ? me?.isrc_admin : key.startsWith('leadership') ? me?.leadership : true);
 
 // Main --------------------------------------------------------------------
 
@@ -870,7 +926,11 @@ function draw() {
   const key = location.hash.slice(1);
   const view = allowed(key) ? VIEWS[key] : null;
   if (view) {
-    show(el('nav', { class: 'crumbs' }, backLink(), el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
+    // Sub-pages (leadership/…) step back to their section, not Home.
+    const parent = key.includes('/') ? key.split('/')[0] : null;
+    show(el('nav', { class: 'crumbs' },
+      parent ? el('a', { class: 'back', href: `#${parent}` }, `‹ ${VIEW_TITLES[parent]}`) : backLink(),
+      el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
     show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `Peace, ${me.name}`), homeHelp()), homeView(current));
   }
@@ -890,11 +950,12 @@ async function loadIsrc() {
 }
 async function loadLeadership() {
   if (!me?.leadership || !current) return;
-  const [documents, contributions] = await Promise.all([
+  const [documents, contributions, allProjects] = await Promise.all([
     optionalRows(supabase.from('documents').select('id, number, name, status, date_submitted, date_approved, link, notes'), 'documents'),
     optionalRows(supabase.rpc('leadership_contributions'), 'all contributions'),
+    optionalRows(supabase.from('project_index').select('id, name, status, type, release_date, show_in_gryce, song_count, released_count'), 'all projects'),
   ]);
-  current.leadership = { documents, contributions };
+  current.leadership = { documents, contributions, projects: allProjects };
 }
 
 async function refresh() {

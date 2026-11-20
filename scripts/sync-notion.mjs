@@ -596,6 +596,26 @@ const projects = !PROJECTS_DS ? null : await optional('projects', async () => {
   }));
 });
 
+// Every project, for Leadership's Projects page. Names, status, type, dates and
+// song counts only. Leadership-only in Supabase.
+const projectIndex = !PROJECTS_DS ? null : await optional('project index', async () => {
+  const pages = await queryAll(PROJECTS_DS);
+  return pages.map((p) => {
+    const songs = songStageByProject.get(p.id) ?? [];
+    return {
+      id: p.id,
+      name: titleOf(p) ?? '(untitled project)',
+      status: select(p.properties['Status']),
+      type: select(p.properties['Project Type']),
+      release_date: date(p.properties['Release Date']),
+      show_in_gryce: p.properties[SHOW_PROP]?.checkbox === true,
+      song_count: songs.length,
+      released_count: songs.filter((x) => x.released).length,
+      synced_at: runStart,
+    };
+  });
+});
+
 // Document Number Registry, for Leadership.
 const documents = !DOCUMENTS_DB ? null : await optional('documents', async () => {
   const pages = await queryAll(await dataSourceId(DOCUMENTS_DB));
@@ -641,6 +661,7 @@ const itemsSaved = await save('funding items', 'funding_items', fundingItems);
 const contribSaved = await save('contributions', 'contributions', contributions);
 const projectsSaved = await save('projects', 'projects', projects);
 const docsSaved = await save('documents', 'documents', documents);
+const indexSaved = await save('project index', 'project_index', projectIndex);
 
 // Every ISRC code already in Notion goes into isrc_codes, so new codes carry on
 // from the last number. Codes issued in gryCE are already there and stay as they are.
@@ -660,6 +681,7 @@ if (itemsSaved) staleTables.unshift('funding_items');
 if (contribSaved) staleTables.unshift('contributions');
 if (projectsSaved) staleTables.unshift('projects');
 if (docsSaved) staleTables.unshift('documents');
+if (indexSaved) staleTables.unshift('project_index');
 // announcement_acks, member_updates and isrc_codes are never in this list.
 for (const t of staleTables) await deleteStale(t, runStart);
 
@@ -699,6 +721,7 @@ console.log(
     (contribSaved ? `, ${contributions.length} contributions` : '') +
     (projectsSaved ? `, ${projects.length} projects` : '') +
     (docsSaved ? `, ${documents.length} documents` : '') +
+    (indexSaved ? `, ${projectIndex.length} in the project index` : '') +
     (codesLoaded ? `, ${knownCodes.length} ISRC codes` : '') +
     `. Pushed ${pushed} member updates` +
     (isrcPushed ? `, wrote ${isrcPushed} new ISRC codes to Notion` : '') +
