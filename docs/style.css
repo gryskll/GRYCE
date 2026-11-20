@@ -313,3 +313,14 @@ a.help-button:hover { text-decoration: none; }
 
 /* v0.4.17: group efforts */
 .effort-line { margin: 8px 0 0; font-weight: 700; }
+
+/* v0.4.19: View as (Support) */
+.view-as-banner {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  margin: 0 0 1rem; padding: 0.6rem 0.9rem;
+  border: 1px solid var(--warn); border-radius: 10px;
+  background: color-mix(in srgb, var(--warn) 18%, var(--panel));
+}
+.view-as-banner p { margin: 0; font-size: 0.9rem; }
+body.viewing-as .update { display: none; }

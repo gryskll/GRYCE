@@ -20,7 +20,7 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 // Empty sections come back as null. Drop them, or the page prints "null".
-const show = (...nodes) => app.replaceChildren(...nodes.flat().filter((n) => n != null && n !== false));
+const show = (...nodes) => app.replaceChildren(...[viewBanner(), ...nodes].flat().filter((n) => n != null && n !== false));
 
 const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : null);
 const fmtDate = (d) =>
@@ -220,6 +220,7 @@ function announcementRow(a, acked) {
     a.body && el('p', { class: 'ann-body' }, a.body),
     acked
       ? el('p', { class: 'small muted' }, `Acknowledged ${fmtDate(acked.acknowledged_at)}`)
+      : viewingAs() ? el('p', { class: 'small muted' }, 'Not acknowledged yet')
       : el('button', {
         class: 'primary small', type: 'button',
         onclick: async (e) => {
@@ -1046,7 +1047,7 @@ function homeView(d) {
     })(),
     tile('works', 'In the works', String(working), working === 1 ? 'Song' : 'Songs'),
     tile('discography', 'Discography', String(released), 'Released'),
-    me?.isrc_admin && (() => {
+    me?.isrc_admin && !viewingAs() && (() => {
       const songs = d.isrc?.songs ?? [];
       const codedIds = new Set((d.isrc?.codes ?? []).map((c) => c.song_id));
       const open = songs.filter((s) => !isrcOf(s) && !codedIds.has(s.id)).length;
@@ -1055,15 +1056,63 @@ function homeView(d) {
     me?.leadership && (() => {
       const waiting = docsWaiting(d).length;
       return tile('leadership', 'Leadership', String(waiting), waiting ? (waiting === 1 ? 'Doc waiting on you' : 'Docs waiting on you') : 'Nothing waiting', waiting ? 'hot' : null);
-    })());
+    })(),
+    support?.is_support && !viewingAs() && tile('support', 'Support', 'View as', 'See gryCE as a member sees it'));
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
 
-const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView };
+const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView, support: supportView };
 const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Projects', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership',
-  'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions' };
+  'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions', support: 'Support' };
 // Sections only some members get. Anyone else who types the address lands on Home.
-const allowed = (key) => (key === 'isrc' ? me?.isrc_admin : key.startsWith('leadership') ? me?.leadership : true);
+const allowed = (key) => (key === 'isrc' ? me?.isrc_admin && !viewingAs()
+  : key === 'support' ? support?.is_support && !viewingAs()
+  : key.startsWith('leadership') ? me?.leadership : true);
+
+// Support: View as (Support only) -------------------------------------------
+// A Support member can see gryCE exactly as another member does, read only.
+// The database does the work: while a session is open it answers every query
+// as that member and refuses writes. Sessions end on Exit or after 30 minutes.
+
+let support = null;   // { is_support, viewing_id, viewing_name, expires_at } or null
+
+const viewingAs = () => Boolean(support?.viewing_id);
+
+function viewBanner() {
+  if (!viewingAs()) return null;
+  const until = new Date(support.expires_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return el('div', { class: 'view-as-banner', role: 'status' },
+    el('p', {}, el('strong', {}, `Viewing as ${support.viewing_name}`), ` · read only · ends ${until}`),
+    el('button', { class: 'primary small', type: 'button', onclick: async (e) => {
+      e.currentTarget.disabled = true;
+      await supabase.rpc('stop_view_as');
+      location.hash = '#support';
+      await reload();
+    } }, 'Exit'));
+}
+
+function supportView() {
+  const box = el('div', {}, el('p', { class: 'muted' }, 'Loading members…'));
+  supabase.rpc('support_members').then(({ data, error }) => {
+    if (error) return box.replaceChildren(el('p', { class: 'error' }, `Couldn’t load members: ${error.message}`));
+    const msg = el('p', { class: 'error small', hidden: true });
+    box.replaceChildren(
+      el('ul', { class: 'takes' }, (data ?? []).map((m) => el('li', { class: 'take' },
+        el('div', { class: 'take-main' },
+          el('span', { class: 'take-song' }, m.name),
+          el('button', { class: 'ghost small', type: 'button', onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            const { error: err } = await supabase.rpc('start_view_as', { p_artist_id: m.id });
+            if (err) { e.currentTarget.disabled = false; msg.textContent = err.message; msg.hidden = false; return; }
+            location.hash = '';
+            await reload();
+          } }, 'View as'))))),
+      msg);
+  });
+  return panel('View as a member',
+    el('p', { class: 'small muted' }, 'See gryCE exactly as a member sees it, to help them. It’s read only, ends after 30 minutes, and every view is logged for Leadership.'),
+    box);
+}
 
 // Main --------------------------------------------------------------------
 
@@ -1177,19 +1226,33 @@ async function render(session) {
   if (meErr) return show(el('p', { class: 'error' }, `Couldn’t load your profile: ${meErr.message}`));
   if (!data) return notLinkedView(email);
   me = data;
+  support = null;
+  {
+    const { data: st, error: stErr } = await supabase.rpc('support_status');
+    if (!stErr) support = (Array.isArray(st) ? st[0] : st) ?? null;
+  }
+  document.body.classList.toggle('viewing-as', viewingAs());
   // Linked members get the full help inside gryCE. Everyone else gets the sign-in help page.
   document.getElementById('help-link').href = '#help';
 
-  document.getElementById('who-name').textContent = me.name;
+  document.getElementById('who-name').textContent = viewingAs() ? `${me.name} (View as)` : me.name;
   document.getElementById('who').hidden = false;
   await refresh();
 }
 
 let renderedFor;
+let lastSession = null;
+// After starting or ending View as, load everything again as the new identity.
+async function reload() {
+  current = null;
+  show(el('p', { class: 'muted' }, 'Loading…'));
+  await render(lastSession);
+}
 const renderOnce = (s) => {
   const key = s?.user?.id ?? 'signed-out';
   if (key === renderedFor) return;
   renderedFor = key;
+  lastSession = s;
   render(s);
 };
 

@@ -85,6 +85,11 @@ const HELP = `
       </ul>
     </section>
 <section class="card">
+      <h2>Support: View as</h2>
+      <p>Support members get a <strong>Support</strong> tile. Pick a member and tap <strong>View as</strong> to see gryCE the way they do, so you can walk them through it. A banner across the top says who you're viewing as. Tap <strong>Exit</strong> to go back to your own page. It also ends by itself after 30 minutes.</p>
+      <p>While you're viewing as someone, nothing can be sent: no Mark submitted, notes, acknowledgements or ISRC codes. Every view is logged, and the Leadership Team can see the log.</p>
+    </section>
+<section class="card">
       <h2>Who sees what</h2>
       <ul>
         <li>Only GRYSKLL members who are linked can see anything. A login that isn't linked sees nothing.</li>
@@ -93,6 +98,7 @@ const HELP = `
         <li>Everyone sees crew news, crew tasks, each project's Outstanding list, and funding stages with dollar amounts.</li>
         <li>The Leadership Team also sees everyone's contributions and the document registry.</li>
         <li>ISRC Admins also see every song's ISRC codes.</li>
+        <li>To help you, Support (Shaah and Q for now) can view your page exactly as you see it. It's read only, so they can't change or send anything for you, and every view is logged for the Leadership Team.</li>
         <li>Nobody can see your email address through gryCE.</li>
       </ul>
     </section>

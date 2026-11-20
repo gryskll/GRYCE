@@ -94,3 +94,9 @@ gryCE shows it at the top of Crew tasks with progress, who's in and who's still 
 ## v0.4.18: Deliverables, and notes for developers
 
 Notion is already renamed. Run `supabase/migrations/v4-5-comments.sql` in the SQL Editor. It only adds descriptions to tables and functions, so it changes no data and no access. The Supabase table stays named `takes`.
+
+## v0.4.19: View as, for Support
+
+Notion is done: Artists has a Support checkbox, ticked for Dragon's Pitchfork and Qthulhu. Run `supabase/migrations/v4-6-view-as.sql` in the SQL Editor, then run the sync so the checkbox reaches Supabase.
+
+Test: sign in as a Support member, tap Support, pick a member, tap View as. The banner shows, there are no Mark submitted buttons, and Exit brings you back.
