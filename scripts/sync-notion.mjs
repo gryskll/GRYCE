@@ -611,6 +611,9 @@ const projectIndex = !PROJECTS_DS ? null : await optional('project index', async
       show_in_gryce: p.properties[SHOW_PROP]?.checkbox === true,
       // Leadership only: still being sorted out. Only Leadership sees it until it's unticked.
       leadership_only: p.properties['Leadership Only']?.checkbox === true,
+      description: text(p.properties['Description']),
+      // Song names and stages only, so members can see what's on each project.
+      songs: songs.map((x) => ({ name: x.name, stage: x.stage, released: x.released })),
       song_count: songs.length,
       released_count: songs.filter((x) => x.released).length,
       synced_at: runStart,

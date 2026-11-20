@@ -47,7 +47,8 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Projects</h2>
-      <p>The active project sits at the top with its full card:</p>
+      <p>Projects is a page of cards, one per GRYSKLL project. The active project is first, then everything else grouped by where it stands. The number on each card is how many songs it has. Tap a card to open the project and see its songs, grouped by stage. <strong>‹ Projects</strong> brings you back.</p>
+      <p>The active project's page also has its full card:</p>
       <ul>
         <li><strong>Release date</strong> and a short summary.</li>
         <li><strong>Outstanding:</strong> what the project is still waiting on, by person. Everyone sees this list, so the crew knows what's holding things up.</li>
@@ -55,7 +56,7 @@ const HELP = `
         <li><strong>Funding:</strong> the stage that's open now, what's been raised against the goal, and what the money pays for. A stage's goal goes up as price quotes come in. It opens on the current stage. Tap <strong>All stages</strong> to see every stage in its own box: green when it's done, amber for the one that's open, gray for the ones still to come.</li>
       </ul>
       <p>If you've put money into a project, you'll also see how much you put in, and which stage pays it back at face value.</p>
-      <p>Below that is every other GRYSKLL project, grouped by where it stands: In Production, Mixing &amp; Mastering, Planning, On Hold, Concept and Released. Each shows its type, how many songs it has and its date, so you can see what's coming up and where you might fit in.</p>
+      <p>The other projects are grouped In Production, Mixing &amp; Mastering, Planning, On Hold, Concept and Released, so you can see what's coming up and where you might fit in.</p>
     </section>
 <section class="card">
       <h2>Your music</h2>

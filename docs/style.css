@@ -303,3 +303,10 @@ a.help-button:hover { text-decoration: none; }
 .tiles.jump .tile-title { font-size: 14px; }
 .tiles.jump .tile-sub { font-size: 12px; }
 @media (max-width: 360px) { .tiles.jump { grid-template-columns: repeat(2, 1fr); } }
+
+/* v0.4.15: project cards */
+.tiles.cards { margin-top: 10px; }
+.tiles.cards .tile { aspect-ratio: auto; min-height: 132px; }
+.tiles.cards .tile-count { font-size: 32px; }
+.tiles.cards .tile-title { font-size: 15px; }
+.tile-flag { align-self: flex-start; margin-top: 4px; }

@@ -528,13 +528,13 @@ function projectsOf(d) {
   }).sort((a, b) => (a.p?.release_date ?? '9999').localeCompare(b.p?.release_date ?? '9999'));
 }
 
-function projectsView(d) {
+function projectsView(d, onlyId) {
   const itemsByStage = new Map();
   for (const i of d.items) {
     if (!itemsByStage.has(i.stage_id)) itemsByStage.set(i.stage_id, []);
     itemsByStage.get(i.stage_id).push(i);
   }
-  const list = projectsOf(d);
+  const list = projectsOf(d).filter((x) => !onlyId || x.id === onlyId);
   if (list.length === 0) return panel('Active project', null, el('p', { class: 'muted' }, 'No active projects right now.'));
   return list.map(({ id, name, p, stages }) => panel(name, p?.status && el('span', { class: 'pill' }, p.status),
     p?.release_date && el('p', { class: 'release' }, `Release: ${new Date(`${p.release_date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`),
@@ -886,33 +886,71 @@ const PROJECT_SECTIONS = [
   ['Concept', 'gray'],
   ['Released', 'green'],
 ];
+function projectTile(p, active) {
+  const n = p.song_count ?? 0;
+  const when = p.release_date && `${p.status === 'Released' ? 'Out' : 'Target'} ${fmtDate(p.release_date)}`;
+  return el('a', { class: `tile${active ? ' hot' : ''}`, href: `#projects/${p.id}` },
+    el('span', { class: 'tile-count' }, String(n)),
+    el('span', { class: 'tile-title' }, p.name),
+    el('span', { class: 'tile-sub' }, [n === 1 ? 'song' : 'songs', p.type, when].filter(Boolean).join(' · ')),
+    p.leadership_only && el('span', { class: 'tag status-needs-decision tile-flag' }, 'Leadership only'));
+}
+
+// Projects: a card per project. Active first, then the rest grouped by status.
 function projectsPage(d) {
-  const activeIds = new Set(projectsOf(d).map((p) => p.id));
+  const active = projectsOf(d);
+  const activeIds = new Set(active.map((p) => p.id));
+  const index = new Map((d.allProjects ?? []).map((p) => [p.id, p]));
   const others = (d.allProjects ?? []).filter((p) => !activeIds.has(p.id))
     .sort((a, b) => (b.release_date ?? '').localeCompare(a.release_date ?? '') || a.name.localeCompare(b.name));
-  const row = (p) => el('li', { class: 'take' },
-    el('div', { class: 'take-main' },
-      el('span', { class: 'take-song' }, p.name),
-      p.leadership_only && el('span', { class: 'tag status-needs-decision' }, 'Leadership only'),
-      p.song_count > 0 && el('span', { class: 'take-name' }, `${p.song_count} song${p.song_count === 1 ? '' : 's'}${p.released_count ? `, ${p.released_count} out` : ''}`)),
-    el('div', { class: 'take-meta' },
-      p.type && el('span', { class: 'tag' }, p.type),
-      p.release_date && el('span', { class: 'muted' }, `${p.status === 'Released' ? 'Released' : 'Target'} ${fmtDate(p.release_date)}`)));
   const known = new Set(PROJECT_SECTIONS.map(([st]) => st));
+  const cards = (list) => el('div', { class: 'tiles cards' }, list);
   return [
-    el('p', { class: 'eyebrow' }, 'Active'),
-    ...[projectsView(d)].flat(),
-    others.length > 0 && panel('Other projects', countTag(others.length),
-      PROJECT_SECTIONS.map(([status, tone]) => {
-        const list = others.filter((p) => p.status === status);
-        return list.length > 0 && group(tone, status, groupCount(list.length), el('ul', { class: 'takes' }, list.map(row)));
-      }),
-      (() => {
-        const list = others.filter((p) => !known.has(p.status));
-        return list.length > 0 && group('gray', 'No status', groupCount(list.length), el('ul', { class: 'takes' }, list.map(row)));
-      })()),
-    others.length === 0 && (d.allProjects ?? []).length === 0
-      && panel('Other projects', null, el('p', { class: 'muted' }, 'The full project list shows after the next sync.')),
+    active.length > 0 && group('green', 'Active', groupCount(active.length),
+      cards(active.map(({ id, name, p }) => projectTile({
+        ...(index.get(id) ?? {}), id, name, status: p?.status, release_date: p?.release_date,
+        song_count: index.get(id)?.song_count ?? p?.songs?.length ?? 0,
+      }, true)))),
+    ...PROJECT_SECTIONS.map(([status, tone]) => {
+      const list = others.filter((p) => p.status === status);
+      return list.length > 0 && group(tone, status, groupCount(list.length), cards(list.map((p) => projectTile(p))));
+    }),
+    (() => {
+      const list = others.filter((p) => !known.has(p.status));
+      return list.length > 0 && group('gray', 'No status', groupCount(list.length), cards(list.map((p) => projectTile(p))));
+    })(),
+    (d.allProjects ?? []).length === 0 && active.length === 0
+      && el('p', { class: 'muted' }, 'Projects show after the next sync.'),
+  ];
+}
+
+// One project, opened from its card. The active project gets its full card
+// (outstanding, songs, funding). Every project lists its songs by stage.
+function projectDetail(d, id) {
+  const ix = (d.allProjects ?? []).find((p) => p.id === id);
+  const isActive = projectsOf(d).some((p) => p.id === id);
+  if (!ix && !isActive) return panel('Project', null, el('p', { class: 'muted' }, 'This project isn’t in gryCE right now.'));
+  const songs = ix?.songs ?? [];
+  const stages = [...new Set(songs.map((x) => x.stage ?? 'No stage yet'))].sort((a, b) => stageRank(a) - stageRank(b));
+  const toneFor = (st) => { const r = stageRank(st); return r === 0 ? 'green' : r <= 3 ? 'green' : r <= 6 ? 'orange' : r <= 9 ? 'blue' : 'gray'; };
+  return [
+    ix && panel(ix.name, ix.status && el('span', { class: 'pill' }, ix.status),
+      el('div', { class: 'take-meta' },
+        ix.type && el('span', { class: 'tag' }, ix.type),
+        ix.leadership_only && el('span', { class: 'tag status-needs-decision' }, 'Leadership only'),
+        ix.release_date && el('span', { class: 'muted' }, `${ix.status === 'Released' ? 'Released' : 'Target'} ${fmtDate(ix.release_date)}`),
+        el('span', { class: 'muted' }, `${songs.length} song${songs.length === 1 ? '' : 's'}${ix.released_count ? `, ${ix.released_count} out` : ''}`)),
+      ix.description && el('p', { class: 'ann-body' }, ix.description)),
+    isActive && projectsView(d, id),
+    !isActive && panel('Songs', countTag(songs.length),
+      songs.length === 0 && el('p', { class: 'muted' }, 'No songs on this project yet.'),
+      stages.map((st) => {
+        const list = songs.filter((x) => (x.stage ?? 'No stage yet') === st).sort((a, b) => a.name.localeCompare(b.name));
+        return group(toneFor(st), st, groupCount(list.length),
+          el('ul', { class: 'songs' }, list.map((x) => el('li', { class: 'song' },
+            el('div', { class: 'song-main' }, el('span', {}, x.name)),
+            x.released && x.stage !== 'Released' && el('div', { class: 'song-meta' }, el('span', { class: 'tag dev-released' }, 'Out now'))))));
+      })),
   ];
 }
 
@@ -985,6 +1023,17 @@ async function optionalRows(query, label) {
 function draw() {
   if (!current) return;
   const key = location.hash.slice(1);
+  // A single project: #projects/<id>
+  if (key.startsWith('projects/')) {
+    const id = key.slice('projects/'.length);
+    const name = (current.allProjects ?? []).find((p) => p.id === id)?.name
+      ?? projectsOf(current).find((p) => p.id === id)?.name ?? 'Project';
+    show(el('nav', { class: 'crumbs' },
+      el('a', { class: 'back', href: '#projects' }, '‹ Projects'),
+      el('span', { class: 'here' }, name)), projectDetail(current, id));
+    window.scrollTo(0, 0);
+    return;
+  }
   const view = allowed(key) ? VIEWS[key] : null;
   if (view) {
     // Sub-pages (leadership/…) step back to their section, not Home.
