@@ -2,6 +2,11 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.14, November 20, 2026
+- Funding: under All stages, each stage is its own colored box. Done stages are green, the open stage amber, and stages not started yet gray.
+- Projects: a project ticked Leadership Only in Notion shows only to Leadership while it's being sorted out. Leadership sees a Leadership only tag on it.
+- Projects: On Hold gets its own group.
+
 ## v0.4.13, November 20, 2026
 - Project updates is now **Projects**, for everyone: the active project at the top with its full card, then every other GRYSKLL project grouped by status, so the crew can see what's in the pipeline.
 - What you owe has section cards across the top. Tap one to jump to that part.

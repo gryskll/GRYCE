@@ -52,10 +52,10 @@ const HELP = `
         <li><strong>Release date</strong> and a short summary.</li>
         <li><strong>Outstanding:</strong> what the project is still waiting on, by person. Everyone sees this list, so the crew knows what's holding things up.</li>
         <li><strong>Songs:</strong> how many songs are at each stage, from Arrangement through Released. Tap <strong>Song by song</strong> for the full list. <strong>Awaiting Mix Funding</strong> means a song is ready to mix and waiting on the money to pay for it.</li>
-        <li><strong>Funding:</strong> the stage that's open now, what's been raised against the goal, and what the money pays for. A stage's goal goes up as price quotes come in. It opens on the current stage. Tap <strong>All stages</strong> to see every stage and what each one pays for.</li>
+        <li><strong>Funding:</strong> the stage that's open now, what's been raised against the goal, and what the money pays for. A stage's goal goes up as price quotes come in. It opens on the current stage. Tap <strong>All stages</strong> to see every stage in its own box: green when it's done, amber for the one that's open, gray for the ones still to come.</li>
       </ul>
       <p>If you've put money into a project, you'll also see how much you put in, and which stage pays it back at face value.</p>
-      <p>Below that is every other GRYSKLL project, grouped by where it stands: In Production, Mixing &amp; Mastering, Planning, Concept and Released. Each shows its type, how many songs it has and its date, so you can see what's coming up and where you might fit in.</p>
+      <p>Below that is every other GRYSKLL project, grouped by where it stands: In Production, Mixing &amp; Mastering, Planning, On Hold, Concept and Released. Each shows its type, how many songs it has and its date, so you can see what's coming up and where you might fit in.</p>
     </section>
 <section class="card">
       <h2>Your music</h2>
@@ -72,6 +72,7 @@ const HELP = `
       <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on two section cards, Documents and Contributions. Tap one to open it, and <strong>‹ Leadership</strong> brings you back.</p>
       <ul>
         <li><strong>Documents:</strong> what's waiting on Leadership right now, then every other GRY-DOC number with its link, grouped by status: Draft, Approved and Reserved.</li>
+        <li><strong>Projects:</strong> you also see projects marked Leadership only, with a tag. They're still being sorted out, so the rest of the crew doesn't see them yet.</li>
         <li><strong>Contributions:</strong> every payment toward a project and who made it, grouped by project, then funding stage, then contributor type (Crew, Crewmunity, Family loan). Money that came in before a campaign started shows first, under <strong>Before the album</strong>. Each group shows what's come in and what's still owed back.</li>
       </ul>
       <p>Every contribution is tied to a person, a crew member or a supporter, so Leadership can follow up with updates, thank-yous and gifts. Supporters' contact details stay in GRYSKLL's records and never show in gryCE. A contribution not tied to anyone yet gets an amber <strong>Link to a person in Notion</strong> tag.</p>

@@ -609,6 +609,8 @@ const projectIndex = !PROJECTS_DS ? null : await optional('project index', async
       type: select(p.properties['Project Type']),
       release_date: date(p.properties['Release Date']),
       show_in_gryce: p.properties[SHOW_PROP]?.checkbox === true,
+      // Leadership only: still being sorted out. Only Leadership sees it until it's unticked.
+      leadership_only: p.properties['Leadership Only']?.checkbox === true,
       song_count: songs.length,
       released_count: songs.filter((x) => x.released).length,
       synced_at: runStart,

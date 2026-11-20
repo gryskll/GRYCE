@@ -75,3 +75,7 @@ Reconnect Claude's Supabase connector scoped and read-only. That's a task in GRY
 ## v0.4.13: every section organized, Projects for everyone
 
 **SQL:** `supabase/migrations/v4-3-project-index.sql`. Adds `project_index`, every Music Project (name, status, type, release date, song counts). Every signed-in member sees it. The full card (songs, outstanding, funding) is still only for Show in gryCE projects.
+
+## v0.4.14: Leadership Only projects
+
+Music Projects has a **Leadership Only** checkbox. Tick it while a project is still being sorted out. Only Leadership sees it in gryCE, with a Leadership only tag, until it's unticked. The SQL is at the end of `v4-3-project-index.sql` (applied November 20).

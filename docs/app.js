@@ -439,12 +439,11 @@ function stageRow(s, itemsByStage) {
   const its = itemsByStage.get(s.id) ?? [];
   const goal = goalOf(its);
   const raised = money(Number(s.raised) || 0);
-  return el('li', { class: 'take' },
-    el('div', { class: 'take-main' },
-      el('span', { class: 'take-song' }, stageLabel(s)),
-      el('span', { class: 'take-name' }, goal > 0 ? `${raised} of ${money(goal)}` : `${raised} raised`)),
+  // Each stage is its own colored box: done green, open amber, not started gray.
+  const tone = s.status === 'Complete' ? 'green' : s.status === 'Underway' ? 'amber' : 'gray';
+  return group(tone, stageLabel(s), el('span', { class: 'take-name' }, goal > 0 ? `${raised} of ${money(goal)}` : `${raised} raised`),
     el('div', { class: 'take-meta' }, s.status && el('span', { class: `tag stage-${slug(s.status)}` }, s.status)),
-    its.length > 0 && el('ul', { class: 'takes nested' }, its.map(itemRow)));
+    its.length > 0 && el('ul', { class: 'takes' }, its.map(itemRow)));
 }
 
 function fundingBlock(stages, itemsByStage, contributions) {
@@ -459,8 +458,7 @@ function fundingBlock(stages, itemsByStage, contributions) {
         moneyLine(current, currentItems),
         currentItems.length > 0 && el('ul', { class: 'takes' }, currentItems.map(itemRow))]
       : el('p', { class: 'muted' }, 'Every stage is complete.'));
-  const allPane = el('div', { class: 'pane', hidden: true },
-    el('ul', { class: 'takes' }, list.map((s) => stageRow(s, itemsByStage))));
+  const allPane = el('div', { class: 'pane', hidden: true }, list.map((s) => stageRow(s, itemsByStage)));
 
   const btnCurrent = el('button', { class: 'seg on', type: 'button', 'aria-pressed': 'true' }, 'Current stage');
   const btnAll = el('button', { class: 'seg', type: 'button', 'aria-pressed': 'false' }, `All stages (${list.length})`);
@@ -884,6 +882,7 @@ const PROJECT_SECTIONS = [
   ['In Production', 'blue'],
   ['Mixing & Mastering', 'orange'],
   ['Planning', 'amber'],
+  ['On Hold', 'red'],
   ['Concept', 'gray'],
   ['Released', 'green'],
 ];
@@ -894,6 +893,7 @@ function projectsPage(d) {
   const row = (p) => el('li', { class: 'take' },
     el('div', { class: 'take-main' },
       el('span', { class: 'take-song' }, p.name),
+      p.leadership_only && el('span', { class: 'tag status-needs-decision' }, 'Leadership only'),
       p.song_count > 0 && el('span', { class: 'take-name' }, `${p.song_count} song${p.song_count === 1 ? '' : 's'}${p.released_count ? `, ${p.released_count} out` : ''}`)),
     el('div', { class: 'take-meta' },
       p.type && el('span', { class: 'tag' }, p.type),
@@ -1036,7 +1036,7 @@ async function refresh() {
     optionalRows(supabase.from('contributions').select('id, project_id, amount, repayment'), 'contributions'),
     optionalRows(supabase.from('projects').select('id, name, status, release_date, summary, songs'), 'projects'),
     // Every GRYSKLL project, so the whole crew sees what's in the pipeline.
-    optionalRows(supabase.from('project_index').select('id, name, status, type, release_date, show_in_gryce, song_count, released_count'), 'all projects'),
+    optionalRows(supabase.from('project_index').select('*'), 'all projects'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
