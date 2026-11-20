@@ -10,7 +10,7 @@ const HELP = `
         <li><strong>What you owe:</strong> everything waiting on you.</li>
         <li><strong>Crew news:</strong> announcements for the crew.</li>
         <li><strong>Crew tasks:</strong> open jobs for the whole crew.</li>
-        <li><strong>Project updates:</strong> where each active project stands.</li>
+        <li><strong>Projects:</strong> the active project up top, then everything else in the pipeline.</li>
         <li><strong>In the works:</strong> songs with your name on them that aren't out yet.</li>
         <li><strong>Discography:</strong> your released songs.</li>
       </ul>
@@ -20,7 +20,7 @@ const HELP = `
     </section>
 <section class="card">
       <h2>What you owe</h2>
-      <p>This is the section to check first. It's split into:</p>
+      <p>This is the section to check first. Cards across the top show how much is in each part. Tap one to jump to it. It's split into:</p>
       <ul>
         <li><strong>Requests:</strong> things Shaah or the crew asked everyone for, like lyric sheets. Tap <strong>Acknowledge</strong> once you've seen it.</li>
         <li><strong>Takes:</strong> verses, hooks, beats and re-records you owe, with due dates. Overdue ones are flagged in red.</li>
@@ -42,12 +42,12 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Crew news and tasks</h2>
-      <p><strong>Crew news</strong> shows the newest announcements first. Tap <strong>Acknowledge</strong> so Shaah knows you saw it. Read ones move to the bottom.</p>
-      <p><strong>Crew tasks</strong> are jobs for the whole crew. Anyone can see them. Only the person a task is assigned to can mark it done, and tasks assigned to you show under What you owe.</p>
+      <p><strong>Crew news</strong> shows the newest announcements first. Tap <strong>Acknowledge</strong> so Shaah knows you saw it. New ones are at the top. Read ones fold away at the bottom.</p>
+      <p><strong>Crew tasks</strong> are jobs for the whole crew. Anyone can see them. Only the person a task is assigned to can mark it done, and tasks assigned to you show under What you owe. Tasks are grouped by where they stand: Overdue, In progress, Waiting on someone and Not started.</p>
     </section>
 <section class="card">
-      <h2>Project updates</h2>
-      <p>Each active project gets its own card with:</p>
+      <h2>Projects</h2>
+      <p>The active project sits at the top with its full card:</p>
       <ul>
         <li><strong>Release date</strong> and a short summary.</li>
         <li><strong>Outstanding:</strong> what the project is still waiting on, by person. Everyone sees this list, so the crew knows what's holding things up.</li>
@@ -55,11 +55,12 @@ const HELP = `
         <li><strong>Funding:</strong> the stage that's open now, what's been raised against the goal, and what the money pays for. A stage's goal goes up as price quotes come in. It opens on the current stage. Tap <strong>All stages</strong> to see every stage and what each one pays for.</li>
       </ul>
       <p>If you've put money into a project, you'll also see how much you put in, and which stage pays it back at face value.</p>
+      <p>Below that is every other GRYSKLL project, grouped by where it stands: In Production, Mixing &amp; Mastering, Planning, Concept and Released. Each shows its type, how many songs it has and its date, so you can see what's coming up and where you might fit in.</p>
     </section>
 <section class="card">
       <h2>Your music</h2>
-      <p><strong>Discography</strong> lists every released song you're credited on, newest first, with your roles. Tap a song title to listen when there's a link.</p>
-      <p><strong>In the works</strong> lists songs you're on that aren't out yet, with their stage and target date. Songs where you still owe a take are at the top.</p>
+      <p><strong>Discography</strong> lists every released song you're credited on, grouped by year, newest first, with your roles. Tap a song title to listen when there's a link.</p>
+      <p><strong>In the works</strong> lists songs you're on that aren't out yet, grouped by stage, closest to release first. Songs where you still owe a take are in a red group at the top.</p>
     </section>
 <section class="card">
       <h2>ISRC codes</h2>
@@ -68,10 +69,9 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Leadership</h2>
-      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile with three parts:</p>
+      <p>The GRYSCO Leadership Team gets a <strong>Leadership</strong> tile. It opens on two section cards, Documents and Contributions. Tap one to open it, and <strong>‹ Leadership</strong> brings you back.</p>
       <ul>
-        <li><strong>Waiting on Leadership:</strong> documents that need you right now.</li>
-        <li><strong>Document registry:</strong> every other GRY-DOC number with its link, grouped by status: Draft, Approved and Reserved.</li>
+        <li><strong>Documents:</strong> what's waiting on Leadership right now, then every other GRY-DOC number with its link, grouped by status: Draft, Approved and Reserved.</li>
         <li><strong>Contributions:</strong> every payment toward a project and who made it, grouped by project, then funding stage, then contributor type (Crew, Crewmunity, Family loan). Money that came in before a campaign started shows first, under <strong>Before the album</strong>. Each group shows what's come in and what's still owed back.</li>
       </ul>
       <p>Every contribution is tied to a person, a crew member or a supporter, so Leadership can follow up with updates, thank-yous and gifts. Supporters' contact details stay in GRYSKLL's records and never show in gryCE. A contribution not tied to anyone yet gets an amber <strong>Link to a person in Notion</strong> tag.</p>

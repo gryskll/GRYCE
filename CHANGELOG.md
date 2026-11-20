@@ -2,6 +2,12 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.13, November 20, 2026
+- Project updates is now **Projects**, for everyone: the active project at the top with its full card, then every other GRYSKLL project grouped by status, so the crew can see what's in the pipeline.
+- What you owe has section cards across the top. Tap one to jump to that part.
+- Crew news, Crew tasks, In the works and Discography are grouped in colored sections: news by new and read, tasks by where they stand, songs by stage, releases by year.
+- Leadership opens on section cards for Documents and Contributions, each with its own page.
+
 ## v0.4.12, November 20, 2026
 - The footer credit reads "Designed BetweenKeys", with BetweenKeys linking to betweenkeys.org.
 
