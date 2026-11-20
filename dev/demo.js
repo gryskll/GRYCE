@@ -32,7 +32,7 @@ const tables = {
   artists: [me],
   takes: [
     { id: 't1', name: 'Verse 2', type: 'Verse', status: 'Owed', due_date: day(-2), notes: null, song: S.a },
-    { id: 't2', name: 'Lyrics', type: 'Lyrics', status: 'Owed', due_date: day(5), notes: 'Type them under your name in the lyric sheet.', song: S.b },
+    { id: 't2', name: 'Lyrics', type: 'Lyrics', status: 'Owed', due_date: day(5), notes: 'Type them under your name on the lyric sheet: https://docs.google.com/document/d/demo-lyrics/edit . Used for the listening session.', song: S.b },
     { id: 't3', name: 'Stems', type: 'Stems', status: 'Submitted', due_date: day(-6), notes: null, song: S.c },
   ],
   song_credits: [
@@ -46,7 +46,7 @@ const tables = {
     { id: 'k3', name: 'Book the listening room', status: 'Waiting on someone', is_crew: true, assignee_ids: [] },
   ],
   announcements: [
-    { id: 'n1', title: 'Listening session Saturday', type: 'Request', body: 'Tap Acknowledge so we know you saw this.', publish_date: day(-1), audience: 'Everyone' },
+    { id: 'n1', title: 'Listening session Saturday', type: 'Request', body: 'Lyrics folder:\nhttps://drive.google.com/drive/folders/demo-folder\n\nTap Acknowledge so we know you saw this.', publish_date: day(-1), audience: 'Everyone' },
     { id: 'n2', title: 'New mixes are up', type: 'News', body: 'Two songs moved to mixing this week.', publish_date: day(-3), audience: 'Everyone' },
   ],
   announcement_acks: [],

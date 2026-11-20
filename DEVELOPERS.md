@@ -109,6 +109,7 @@ Newer tables and columns are optional: if one is missing, the sync logs "Skipped
   - `refresh()` loads everything once after sign-in into `current`. `draw()` renders the view for `location.hash`.
   - Routes: `#support`, `#owe`, `#news`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
   - Building blocks: `panel()` (a card), `group(tone, title, right, ...body)` (a colored box inside a card), `tile()` (Home and section cards), `jumpCards()` (cards that scroll to a group).
+  - Links: never print a raw URL. Use `linkButton(url, label?)` for a link field and `richText(tag, attrs, text)` for free text from Notion, which turns any URL in it into a button. `linkLabel()` names the button from the address.
   - Tones are green (done, money in), amber (waiting on you), orange (wants input), blue (tasks, songs, drafts), red (owed or holding things up) and gray. Use them the same way everywhere.
 - `docs/help-full.js`: the member guide inside gryCE. Update it in the same release as any change members will see.
 - `docs/help.html`: the public sign-in help.

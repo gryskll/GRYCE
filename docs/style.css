@@ -324,3 +324,14 @@ a.help-button:hover { text-decoration: none; }
 }
 .view-as-banner p { margin: 0; font-size: 0.9rem; }
 body.viewing-as .update { display: none; }
+
+/* v0.4.21: links show as buttons */
+.link-button {
+  display: inline-flex; align-items: center; gap: 4px; vertical-align: baseline;
+  margin: 2px 2px; padding: 3px 12px; border-radius: 999px;
+  border: 1px solid var(--accent); color: var(--accent);
+  font-size: 13px; font-weight: 600; line-height: 1.5; text-decoration: none; white-space: nowrap;
+}
+.link-button::after { content: '↗'; font-size: 11px; opacity: 0.8; }
+.link-button[href$=".html"]::after, .link-button[href^="#"]::after { content: none; }
+.link-button:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
