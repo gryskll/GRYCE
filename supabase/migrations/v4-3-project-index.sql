@@ -26,3 +26,11 @@ create policy "members see all projects" on public.project_index
 revoke all on public.project_index from anon, authenticated;
 grant select on public.project_index to authenticated;
 grant all on public.project_index to service_role;
+
+-- v0.4.14: Leadership Only. Projects still being sorted out show only to Leadership.
+alter table public.project_index add column if not exists leadership_only boolean not null default false;
+
+drop policy if exists "members see all projects" on public.project_index;
+create policy "members see all projects" on public.project_index
+  for select to authenticated
+  using (private.current_artist_id() is not null and (not leadership_only or private.is_leadership()));
