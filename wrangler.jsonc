@@ -1,9 +1,0 @@
-// Cloudflare Workers config: serves the static site in docs/ as-is.
-// No Worker code and no build step. dev/ and everything else stays out.
-{
-  "name": "gryce",
-  "compatibility_date": "2026-11-20",
-  "assets": {
-    "directory": "./docs"
-  }
-}
