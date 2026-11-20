@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.12, November 20, 2026
+- The footer credit reads "Designed BetweenKeys", with BetweenKeys linking to betweenkeys.org.
+
 ## v0.4.11, November 19, 2026
 - Help explains the colored groups, the document registry by status, and how contributions are tied to people.
 
