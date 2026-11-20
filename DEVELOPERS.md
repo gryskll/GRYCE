@@ -18,14 +18,14 @@ You don't need an account, keys or crew data for any of this. Reviewers don't ge
 - **Access rules.** Anything a member can read or write that they shouldn't. The database is the only gate.
 - **The sync.** Failure handling, Notion rate limits, and the stale-row deletes.
 - **`app.js` structure.** How you'd split it without adding a build step.
-- **Hosting.** Moving the static site off GitHub Pages (Cloudflare is the likely next home) and what that changes.
+- **Hosting.** The site moved to Cloudflare Pages on November 20, 2026. Anything we should set there, like security headers in a `docs/_headers` file.
 
 Open an issue or a pull request. Keep crew names, emails and amounts out of both: the repo is public.
 
 ## The shape of it
 
 ```
-Notion (the records)  --->  GitHub Action, every 30 min  --->  Supabase (a copy, plus sign-in)  --->  the site (GitHub Pages)
+Notion (the records)  --->  GitHub Action, every 30 min  --->  Supabase (a copy, plus sign-in)  --->  the site (Cloudflare Pages)
         ^                       scripts/sync-notion.mjs                                                   docs/
         |                                                                                                   |
         +---------------- member updates, acknowledgements, ISRC codes go back the other way <-------------+
@@ -34,9 +34,9 @@ Notion (the records)  --->  GitHub Action, every 30 min  --->  Supabase (a copy,
 - **Notion is the source of truth.** People edit records in Notion. The site never edits Notion directly.
 - **The sync** (`scripts/sync-notion.mjs`) runs on GitHub Actions at :07 and :37 past each hour. It has no dependencies, just Node 22 and `fetch`.
 - **Supabase** holds a copy of what members are allowed to see, handles Google sign-in, and enforces who sees what with row level security (RLS). The site talks to Supabase only, with the public publishable key.
-- **The site** is plain HTML, CSS and one JavaScript module in `docs/`, served by GitHub Pages at gryce.gryskll.com. No build step, no framework.
+- **The site** is plain HTML, CSS and one JavaScript module in `docs/`, served by Cloudflare Pages at gryce.gryskll.com. No build step, no framework. Cloudflare deploys `main` on every merge and builds a preview link for every pull request.
 
-Everything runs on free plans. The repo is public because free GitHub Pages needs it, so nothing private ever goes in it: no crew data, exports, logs, tokens or handoff notes.
+Everything runs on free plans. The repo is public, so nothing private ever goes in it: no crew data, exports, logs, tokens or handoff notes. Cloudflare can deploy from a private repo, so going private is an option later; reviewers would then need to be added as collaborators.
 
 ## Where the data lives
 
@@ -131,7 +131,7 @@ Use `dev/preview.html` (see Kicking the tires). When a release adds a table, col
 6. Open a pull request, one release per PR. The Tests workflow must pass. Merge with squash.
 7. Run the SQL in Supabase (SQL Editor) if there is any. Database changes are shown to Shaah and applied only after a yes.
 8. Run the sync by hand: Actions → Sync Notion to Supabase → Run workflow. Check the last log line.
-9. GitHub Pages updates in a minute or two. The footer shows the new version.
+9. Cloudflare Pages deploys `main` in a minute or two. The footer shows the new version. A pull request gets its own preview link from Cloudflare; signing in there only works if that address is in Supabase's Redirect URLs.
 
 Decisions go in the gryCE Master Reference as suggestions, with a Decision Log entry.
 
