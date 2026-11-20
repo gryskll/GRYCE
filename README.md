@@ -1,12 +1,14 @@
 # gryCE
 
-GRYSKLL Creative Engine. A member portal: crew members sign in with Google and see crew news, the takes and tasks they owe, where project funding stands, what's in the works, and their GRYSKLL discography. Members can mark their own takes submitted and their own tasks done, add a note, and acknowledge announcements.
+New to the code? Read `DEVELOPERS.md` for how it all fits together, how to ship a change, and the cleanup list.
+
+GRYSKLL Creative Engine. A member portal: crew members sign in with Google and see crew news, the deliverables and tasks they owe, where project funding stands, what's in the works, and their GRYSKLL discography. Members can mark their own deliverables submitted and their own tasks done, add a note, and acknowledge announcements.
 
 ## How it fits together
 
-- **Notion** is the source of truth: the Music Catalog (Artists, Songs, Takes, Music Projects, and Announcements, Funding Stages, Funding Items and Contributions on its gryCE page), GRYSKLL Tasks (only tasks with an Assignee or Owner set to Crew).
+- **Notion** is the source of truth: the Music Catalog (Artists, Songs, Deliverables, Music Projects, and Announcements, Funding Stages, Funding Items and Contributions on its gryCE page), GRYSKLL Tasks (only tasks with an Assignee or Owner set to Crew).
 - **GitHub Action** (`.github/workflows/sync-notion.yml`) runs every 30 minutes. It pushes members' pending updates to Notion first, then copies Notion into Supabase, then writes "Acknowledged by" back to each announcement. Run it by hand from the Actions tab for an instant sync.
-- **Two Notion connections.** gryCE Sync reads. gryCE Write can edit only Takes, Tasks, Announcements and Songs, and is only used to push member updates, acknowledgements and newly issued ISRC codes.
+- **Two Notion connections.** gryCE Sync reads. gryCE Write can edit only Deliverables, Tasks, Announcements and Songs, and is only used to push member updates, acknowledgements and newly issued ISRC codes.
 - **Notion stays a one-member Free workspace.** A second member turns on Notion's 1,000-block cap, which this workspace is far past. Crew get in through gryCE only.
 - **Everything runs on free plans.** The repo is public, so nothing with crew data (legal names, IPI numbers, emails, exports, logs) ever goes in it.
 - **Supabase** holds the copy, handles Google sign-in, and uses row level security so each member only sees their own rows.
@@ -53,6 +55,7 @@ Members never edit synced tables. Updates go into `member_updates` (insert only,
 | `scripts/sync-notion.mjs` | Push member updates, Notion → Supabase sync, write-back. No dependencies |
 | `.github/workflows/sync-notion.yml` | Runs the sync on a schedule |
 | `CHANGELOG.md` | What changed in each release |
+| `DEVELOPERS.md` | Guide for developers picking up gryCE |
 | `docs/` | The member portal |
 | `docs/help.html` | Public sign-in help |
 | `docs/help-full.js` | Full member guide, shown inside gryCE |

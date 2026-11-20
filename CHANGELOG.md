@@ -2,6 +2,11 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.18, November 20, 2026
+- Takes are now called Deliverables, since beats, stems, lyrics, mixes and artwork aren't takes. "You owe a take" is now "You owe something".
+- Notion: the Takes database is now Deliverables. Its relations are Deliverables (Songs), Deliverables Owed (Artists), Linked Deliverables (Tasks) and Group Effort Task.
+- For developers: every Supabase table and function now carries a short note on what it is, and DEVELOPERS.md explains how gryCE fits together, how to ship a change, and what to clean up.
+
 ## v0.4.17, November 20, 2026
 - Group efforts: a crew task can link to the takes it depends on. Crew tasks shows a Group effort card with a progress bar, who's in (with a thank-you) and who's still to go, so the crew can check in on each other.
 - First group effort: Lyrics for The Listening Study, Session 2.
