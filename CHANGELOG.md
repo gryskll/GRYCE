@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.29, November 20, 2026
+- Your own tasks now show their notes from Notion. Crew tasks still show only their gryCE Note.
+
 ## v0.4.28, November 20, 2026
 - Your tasks are grouped by project under What you owe, with Now and This week first, and show who or what a task is waiting on.
 - Share a demo is right on Home.
