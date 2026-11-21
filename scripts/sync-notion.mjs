@@ -35,6 +35,9 @@ const CONTRIBUTIONS_DB = '41d53193-34ad-8137-b9a0-000b9d0e3616';
 // v0.4.1 Leadership source. Lives on the GRYSCO Leadership page, outside the Music
 // Catalog. Share only this database with gryCE Sync, never the Leadership page.
 const DOCUMENTS_DB = '41d53193-34ad-810e-adb6-ebf842fdb041';     // Document Number Registry
+const DEMOS_DB = '41f5319334ad8151ba3fe6c47df7cebf';             // Demos (Music Catalog > gryCE)
+const SONG_EDIT_PROPS = { stage: 'Development Stage', mixers: 'Mixing Engineer(s)', mastering: 'Mastering Engineer(s)' };
+const REACTION_LABEL = { feeling: 'Feeling it', want_on: 'Want on it', not_for_me: 'Not for me' };
 
 // ISRC fields on Songs, and the prefix gryCE issues codes under.
 const ISRC_PROPS = { Original: 'ISRC (Original)', Reissue: 'ISRC (GRYSKLL Reissue)' };
@@ -331,9 +334,115 @@ async function pushIsrcCodes() {
   return sent;
 }
 
+// Mix queue edits go onto the song in Notion: stage, mixer, mastering engineer.
+async function pushSongUpdates() {
+  if (!NOTION_WRITE_TOKEN) return 0;
+  const pending = await sb(
+    'song_updates?processed_at=is.null&attempts=lt.5&order=created_at.asc' +
+      '&select=id,song_id,artist_id,new_stage,mixer_ids,mastering_ids,attempts',
+  );
+  if (pending.length === 0) return 0;
+  const names = new Map((await sb('artists?select=id,name')).map((a) => [a.id, a.name]));
+  const list = (ids) => (ids.length ? ids.map((id) => names.get(id) ?? 'someone').join(', ') : 'nobody');
+  let sent = 0;
+  for (const u of pending) {
+    try {
+      const props = {};
+      const lines = [];
+      if (u.new_stage) { props[SONG_EDIT_PROPS.stage] = { select: { name: u.new_stage } }; lines.push(`stage to ${u.new_stage}`); }
+      if (u.mixer_ids) { props[SONG_EDIT_PROPS.mixers] = { relation: u.mixer_ids.map((id) => ({ id })) }; lines.push(`mixer to ${list(u.mixer_ids)}`); }
+      if (u.mastering_ids) { props[SONG_EDIT_PROPS.mastering] = { relation: u.mastering_ids.map((id) => ({ id })) }; lines.push(`mastering engineer to ${list(u.mastering_ids)}`); }
+      await notionWrite(`pages/${u.song_id}`, { method: 'PATCH', body: { properties: props } });
+      const who = names.get(u.artist_id) ?? 'A Mix Queue member';
+      await notionWrite('comments', {
+        method: 'POST',
+        body: { parent: { page_id: u.song_id }, rich_text: [{ type: 'text', text: { content: `${who} set the ${lines.join(', ')} in gryCE's Mix queue.` } }] },
+      });
+      await sb(`song_updates?id=eq.${u.id}`, { method: 'PATCH', body: { processed_at: new Date().toISOString(), error: null }, prefer: 'return=minimal' });
+      sent++;
+    } catch (e) {
+      console.warn(`Song update ${u.id} failed: ${e.message}`);
+      await sb(`song_updates?id=eq.${u.id}`, { method: 'PATCH', body: { attempts: u.attempts + 1, error: e.message.slice(0, 500) }, prefer: 'return=minimal' });
+    }
+  }
+  return sent;
+}
+
+// Demos shared in gryCE get a page in the Notion Demos database.
+async function pushDemos() {
+  if (!NOTION_WRITE_TOKEN) return 0;
+  const pending = await sb('demos?notion_page_id=is.null&push_attempts=lt.5&order=created_at.asc&select=id,artist_id,title,link,note,created_at,push_attempts');
+  if (pending.length === 0) return 0;
+  const ds = await dataSourceId(DEMOS_DB);
+  let sent = 0;
+  for (const d of pending) {
+    try {
+      const rt = (t) => (t ? [{ type: 'text', text: { content: t.slice(0, 1900) } }] : []);
+      const page = await notionWrite('pages', {
+        method: 'POST',
+        body: {
+          parent: { type: 'data_source_id', data_source_id: ds },
+          properties: {
+            Title: { title: rt(d.title) },
+            Artist: { relation: [{ id: d.artist_id }] },
+            Link: { url: d.link },
+            Note: { rich_text: rt(d.note) },
+            Status: { select: { name: 'New' } },
+            Shared: { date: { start: d.created_at.slice(0, 10) } },
+            'gryCE ID': { rich_text: rt(d.id) },
+          },
+        },
+      });
+      await sb(`demos?id=eq.${d.id}`, { method: 'PATCH', body: { notion_page_id: page.id, pushed_at: new Date().toISOString(), push_error: null }, prefer: 'return=minimal' });
+      sent++;
+    } catch (e) {
+      console.warn(`Demo ${d.id} not written to Notion: ${e.message}`);
+      await sb(`demos?id=eq.${d.id}`, { method: 'PATCH', body: { push_attempts: d.push_attempts + 1, push_error: e.message.slice(0, 500) }, prefer: 'return=minimal' });
+    }
+  }
+  return sent;
+}
+
+// Reactions become comments on the demo's Notion page, and the Reactions field
+// shows the running counts.
+async function pushDemoReactions() {
+  if (!NOTION_WRITE_TOKEN) return 0;
+  const pending = await sb('demo_reactions?pushed_at=is.null&select=demo_id,artist_id,reaction,comment,updated_at,demos(notion_page_id)');
+  const ready = pending.filter((r) => r.demos?.notion_page_id);
+  if (ready.length === 0) return 0;
+  const names = new Map((await sb('artists?select=id,name')).map((a) => [a.id, a.name]));
+  const touched = new Map();
+  let sent = 0;
+  for (const r of ready) {
+    try {
+      const page = r.demos.notion_page_id;
+      const text = `${names.get(r.artist_id) ?? 'A member'} reacted ${REACTION_LABEL[r.reaction] ?? r.reaction} in gryCE.` + (r.comment ? `\nComment: ${r.comment}` : '');
+      await notionWrite('comments', { method: 'POST', body: { parent: { page_id: page }, rich_text: [{ type: 'text', text: { content: text } }] } });
+      await sb(`demo_reactions?demo_id=eq.${r.demo_id}&artist_id=eq.${r.artist_id}&updated_at=eq.${encodeURIComponent(r.updated_at)}`,
+        { method: 'PATCH', body: { pushed_at: new Date().toISOString() }, prefer: 'return=minimal' });
+      touched.set(r.demo_id, page);
+      sent++;
+    } catch (e) {
+      console.warn(`Reaction on demo ${r.demo_id} not written to Notion: ${e.message}`);
+    }
+  }
+  for (const [demoId, page] of touched) {
+    const all = await sb(`demo_reactions?demo_id=eq.${demoId}&select=reaction`);
+    const count = (k) => all.filter((x) => x.reaction === k).length;
+    const summary = Object.keys(REACTION_LABEL).map((k) => `${REACTION_LABEL[k]} ${count(k)}`).join(' | ');
+    await optional('demo reaction counts', () => notionWrite(`pages/${page}`, {
+      method: 'PATCH', body: { properties: { Reactions: { rich_text: [{ type: 'text', text: { content: summary } }] } } },
+    }));
+  }
+  return sent;
+}
+
 const runStart = new Date().toISOString();
 const pushed = (await optional('member updates push', pushMemberUpdates)) ?? 0;
 const isrcPushed = (await optional('ISRC push', pushIsrcCodes)) ?? 0;
+const songEdits = (await optional('Mix queue edits push', pushSongUpdates)) ?? 0;
+const demosPushed = (await optional('demos push', pushDemos)) ?? 0;
+const reactionsPushed = (await optional('demo reactions push', pushDemoReactions)) ?? 0;
 
 // 2. Pull ------------------------------------------------------------------
 
@@ -717,6 +826,25 @@ if (indexSaved) staleTables.unshift('project_index');
 // announcement_acks, member_updates and isrc_codes are never in this list.
 for (const t of staleTables) await deleteStale(t, runStart);
 
+// Demos: read Status and Hidden back from Notion. gryCE owns everything else.
+let demoStatuses = 0;
+await optional('demo statuses', async () => {
+  const pages = await queryAll(await dataSourceId(DEMOS_DB));
+  const demos = await sb('demos?select=id,status,hidden');
+  const byId = new Map(demos.map((d) => [d.id, d]));
+  for (const p of pages) {
+    const id = text(p.properties['gryCE ID']);
+    const d = id && byId.get(id);
+    if (!d) continue;
+    const status = select(p.properties['Status']) ?? 'New';
+    const hidden = p.properties['Hidden']?.checkbox === true;
+    if (status !== d.status || hidden !== d.hidden) {
+      await sb(`demos?id=eq.${d.id}`, { method: 'PATCH', body: { status, hidden }, prefer: 'return=minimal' });
+      demoStatuses++;
+    }
+  }
+});
+
 // 3. Write back "Acknowledged by" ------------------------------------------
 
 let ackUpdates = 0;
@@ -757,6 +885,10 @@ console.log(
     (codesLoaded ? `, ${knownCodes.length} ISRC codes` : '') +
     `. Pushed ${pushed} member updates` +
     (isrcPushed ? `, wrote ${isrcPushed} new ISRC codes to Notion` : '') +
+    (songEdits ? `, ${songEdits} Mix queue edits` : '') +
+    (demosPushed ? `, ${demosPushed} new demos` : '') +
+    (reactionsPushed ? `, ${reactionsPushed} demo reactions` : '') +
+    (demoStatuses ? `, ${demoStatuses} demo statuses` : '') +
     (ackUpdates ? `, updated Acknowledged by on ${ackUpdates}` : '') +
     '.',
 );

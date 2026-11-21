@@ -104,3 +104,11 @@ Test: sign in as a Support member, tap Support, pick a member, tap View as. The 
 ## v0.4.24: Mix queue
 
 Notion is done: Artists has a Mix Queue checkbox, ticked for Qthulhu and Dragon's Pitchfork. Run `supabase/migrations/v4-7-mix-queue.sql` in the SQL Editor, then run the sync so the checkbox and each song's project reach Supabase. Until the SQL runs, nobody sees the tile.
+
+## v0.4.25: Mix queue edits and demos
+
+1. Notion: open the new **Demos** database (Music Catalog > gryCE > Demos). Click ... > Connections and add **gryCE Sync** and **gryCE Write**. gryCE Write needs to insert pages and comments there.
+2. Run `supabase/migrations/v4-8-mix-edits-demos.sql` in the SQL Editor.
+3. Run the sync by hand. The log line lists Mix queue edits, new demos and reactions when there are any.
+
+Test: in the Mix queue, Edit a song and change only the mixer. The row says the change is on its way, and the next sync writes it to Notion with a comment. In Crew news, Share a demo with any https link, then react to it from another member's account.

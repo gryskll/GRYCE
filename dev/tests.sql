@@ -152,3 +152,62 @@ select pg_temp.check('mix queue member sees songs in a mix stage', (select array
 select pg_temp.check('mix queue lists what is still owed', (select jsonb_array_length(owed) from public.mix_queue() where song = 'Song One') = 1);
 select pg_temp.login('one@test');
 select pg_temp.check('non-members get an empty mix queue', (select count(*) from public.mix_queue()) = 0);
+
+-- Mix edits: Mix Queue members can queue an edit on a queued song; others can't.
+select pg_temp.login('lead@test');
+insert into public.song_updates (song_id, new_stage) values ('00000000-0000-0000-0000-0000000000b1', 'Mastering');
+select pg_temp.check('mix queue member can queue a stage change', (select count(*) from public.song_updates) = 1);
+select pg_temp.check('the queue shows the pending change', (select pending->>'stage' from public.mix_queue() where song = 'Song One') = 'Mastering');
+do $$ begin
+  insert into public.song_updates (song_id, new_stage) values ('00000000-0000-0000-0000-0000000000b1', 'Released');
+  raise exception 'FAILED: a stage outside the mix list was accepted';
+exception when insufficient_privilege then raise notice 'ok  only mix stages and Release Ready can be set';
+end $$;
+do $$ begin
+  insert into public.song_updates (song_id, new_stage) values ('00000000-0000-0000-0000-0000000000b2', 'Mixing');
+  raise exception 'FAILED: edited a song that is not in the queue';
+exception when insufficient_privilege then raise notice 'ok  songs outside the queue cannot be edited';
+end $$;
+select pg_temp.login('one@test');
+do $$ begin
+  insert into public.song_updates (song_id, new_stage) values ('00000000-0000-0000-0000-0000000000b1', 'Mixing');
+  raise exception 'FAILED: a non-member edited the mix queue';
+exception when insufficient_privilege then raise notice 'ok  non-members cannot edit the mix queue';
+end $$;
+select pg_temp.check('non-members cannot see queued edits', (select count(*) from public.song_updates) = 0);
+
+-- Demos: anyone can share; reactions are one per member; comments stay private to the owner and Leadership.
+insert into public.demos (title, link, note) values ('Demo One', 'https://example.com/d1', 'rough');
+select pg_temp.check('a member can share a demo', (select count(*) from public.demos) = 1);
+do $$ begin
+  insert into public.demos (title, link) values ('Bad link', 'javascript:alert(1)');
+  raise exception 'FAILED: a non-https link was accepted';
+exception when check_violation then raise notice 'ok  demo links must be https';
+end $$;
+do $$ begin
+  insert into public.demo_reactions (demo_id, reaction) select id, 'feeling' from public.demos;
+  raise exception 'FAILED: reacted to your own demo';
+exception when insufficient_privilege then raise notice 'ok  you cannot react to your own demo';
+end $$;
+select pg_temp.login('two@test');
+select pg_temp.check('other members see the demo', (select count(*) from public.demos) = 1);
+insert into public.demo_reactions (demo_id, reaction, comment) select id, 'want_on', 'I hear a hook' from public.demos;
+update public.demo_reactions set reaction = 'feeling';
+select pg_temp.check('one reaction per member, and it can change', (select feeling from public.demo_summary()) = 1 and (select want_on from public.demo_summary()) = 0);
+select pg_temp.login('lead@test');
+select pg_temp.check('leadership reads the comment', (select comment from public.demo_reactions) = 'I hear a hook');
+select pg_temp.check('leadership sees who commented', (select who from public.demo_comments()) = 'Member Two');
+select pg_temp.check('counts are visible to everyone', (select feeling from public.demo_summary()) = 1);
+select public.start_view_as('00000000-0000-0000-0000-0000000000a2');
+do $$ begin
+  insert into public.demos (title, link) values ('Sneaky', 'https://example.com/x');
+  raise exception 'FAILED: shared a demo while viewing as someone';
+exception when insufficient_privilege then raise notice 'ok  no demos while viewing as someone';
+end $$;
+select public.stop_view_as();
+reset role;
+insert into public.artists (id, name, email, synced_at) values ('00000000-0000-0000-0000-0000000000a5', 'Member Three', 'three@test', now());
+set role authenticated;
+select pg_temp.login('three@test');
+select pg_temp.check('other members cannot read someone else''s comment', (select count(*) from public.demo_reactions) = 0 and (select count(*) from public.demo_comments()) = 0);
+select pg_temp.check('demos show who shared them', (select artist_name from public.demo_summary()) = 'Member One');

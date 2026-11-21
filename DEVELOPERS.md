@@ -10,7 +10,7 @@ You don't need an account, keys or crew data for any of this. Reviewers don't ge
 
 1. **Clone it.** `git clone https://github.com/gryskll/gryce`
 2. **Click through the site with made-up data.** From the repo root run `python3 -m http.server 8000` and open `http://localhost:8000/dev/preview.html`. The bar in the corner switches who you are: member, Leadership, ISRC Admin, Support, or mid View as. `dev/demo.js` stands in for Supabase, and the real `docs/app.js` runs on top of it. Sign-in and saving don't do anything there.
-3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 36 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
+3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 53 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
 4. **Read in this order:** this file, `supabase/migrations/v4-6-view-as.sql` (the access model in one place), `scripts/sync-notion.mjs`, then `docs/app.js`.
 
 ### Where we'd like eyes
@@ -32,7 +32,7 @@ Notion (the records)  --->  GitHub Action, every 30 min  --->  Supabase (a copy,
 ```
 
 - **Notion is the source of truth.** People edit records in Notion. The site never edits Notion directly.
-- **The sync** (`scripts/sync-notion.mjs`) runs on GitHub Actions at :07 and :37 past each hour. It has no dependencies, just Node 22 and `fetch`.
+- **The sync** (`scripts/sync-notion.mjs`) runs on GitHub Actions every 10 minutes. It has no dependencies, just Node 22 and `fetch`.
 - **Supabase** holds a copy of what members are allowed to see, handles Google sign-in, and enforces who sees what with row level security (RLS). The site talks to Supabase only, with the public publishable key.
 - **The site** is plain HTML, CSS and one JavaScript module in `docs/`, served by Cloudflare Pages at gryce.gryskll.com. No build step, no framework. Cloudflare deploys `main` on every merge and builds a preview link for every pull request.
 
@@ -55,7 +55,8 @@ Notion database → Supabase table. The sync finds each Notion database by its I
 | Music Projects (Show in gryCE) | `projects` | Members linked to the project |
 | Music Projects (all) | `project_index` | Everyone, except Leadership Only projects |
 | Document Number Registry | `documents` | Leadership only |
-| (none, made in gryCE) | `member_updates`, `announcement_acks`, `isrc_codes` | Written by the site, see below |
+| (none, made in gryCE) | `member_updates`, `announcement_acks`, `isrc_codes`, `song_updates`, `view_as_sessions` | Written by the site, see below |
+| Demos (made in gryCE first) | `demos`, `demo_reactions` | Everyone sees demos and counts. Comments: the demo's owner and Leadership. The sync creates the Notion page and reads Status and Hidden back |
 
 Every table and the three functions carry a comment explaining what they are (`supabase/migrations/v4-5-comments.sql`). In Supabase, open Table Editor and the comment shows under the table name.
 
@@ -91,6 +92,8 @@ Access is decided in Supabase, not in the site. The site just asks for rows and 
   - `leadership_contributions()`: Leadership only. Every contribution with names.
   - `group_effort_takes()`: everyone signed in. Who, song and status for deliverables linked to a crew task.
   - `mix_queue()`: Mix Queue members only (Artists checkbox). Every unreleased song in a mix stage, in work order, with project, mixer, mastering engineer and anything still owed.
+  - `mix_people()`: Mix Queue members only. Who can be picked as mixer or mastering engineer.
+  - `demo_summary()`: everyone signed in. Who shared each demo and its reaction counts. `demo_comments()`: comments with names, for the demo's owner and Leadership only.
 
 **View as (Support).** `private.current_artist_id()` returns the member being viewed while a Support member has an open session in `view_as_sessions`, so every rule above applies unchanged. `private.signed_in_artist_id()` is always the real person. Writes check `private.viewing_as() is null`. Any new write path (insert policy or function that changes data) must add the same check. Sessions are started and ended only through `start_view_as()` and `stop_view_as()`, end after 30 minutes, and stay in the table as the log.
 

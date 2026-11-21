@@ -7,7 +7,7 @@ GRYSKLL Creative Engine. A member portal: crew members sign in with Google and s
 ## How it fits together
 
 - **Notion** is the source of truth: the Music Catalog (Artists, Songs, Deliverables, Music Projects, and Announcements, Funding Stages, Funding Items and Contributions on its gryCE page), GRYSKLL Tasks (only tasks with an Assignee or Owner set to Crew).
-- **GitHub Action** (`.github/workflows/sync-notion.yml`) runs every 30 minutes. It pushes members' pending updates to Notion first, then copies Notion into Supabase, then writes "Acknowledged by" back to each announcement. Run it by hand from the Actions tab for an instant sync.
+- **GitHub Action** (`.github/workflows/sync-notion.yml`) runs every 10 minutes. It pushes members' pending updates, Mix queue edits, new demos and reactions to Notion first, then copies Notion into Supabase, then writes "Acknowledged by" back to each announcement. Run it by hand from the Actions tab for an instant sync.
 - **Two Notion connections.** gryCE Sync reads. gryCE Write can edit only Deliverables, Tasks, Announcements and Songs, and is only used to push member updates, acknowledgements and newly issued ISRC codes.
 - **Notion stays a one-member Free workspace.** A second member turns on Notion's 1,000-block cap, which this workspace is far past. Crew get in through gryCE only.
 - **Everything runs on free plans.** The repo is public, so nothing with crew data (legal names, IPI numbers, emails, exports, logs) ever goes in it.

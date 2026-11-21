@@ -155,7 +155,7 @@ function notLinkedView(email) {
   show(el('section', { class: 'card' },
     el('h1', {}, 'You’re signed in, but not linked yet'),
     el('p', {}, 'There’s no GRYSKLL artist record for ', el('strong', {}, email), '.'),
-    el('p', { class: 'muted' }, 'Text this email to Shaah so it can be added to your artist profile. Your page fills in within about 30 minutes after that.'),
+    el('p', { class: 'muted' }, 'Text this email to Shaah so it can be added to your artist profile. Your page fills in within about 10 minutes after that.'),
     el('p', { class: 'small muted' }, 'gryCE is for GRYSKLL members right now. ', el('a', { class: 'link-button', href: 'help.html' }, 'Help getting in'))));
 }
 
@@ -172,7 +172,7 @@ function pendingNote(kind, id) {
     return el('p', { class: 'error small' }, 'Your update didn’t reach Notion. Tell Shaah so he can check it.');
   }
   const what = u.new_status ? `Marked ${u.new_status.toLowerCase()}` : 'Note sent';
-  return el('p', { class: 'pending small' }, `${what}. It shows up in Notion within 30 minutes.`);
+  return el('p', { class: 'pending small' }, `${what}. It shows up in Notion within 10 minutes.`);
 }
 
 // Inline form for one item. newStatus is what the main button sets
@@ -402,17 +402,131 @@ function oweView(d) {
   ];
 }
 
+// Demos ---------------------------------------------------------------------
+// Members share a demo (a Boombox or Google Drive link) for crew consideration.
+// It shows here for everyone. The crew reacts; a comment goes only to the
+// person who shared it and Leadership, and to Notion.
+
+const REACTIONS = [['feeling', 'Feeling it'], ['want_on', 'Want on it'], ['not_for_me', 'Not for me']];
+const DEMO_STATUS_TONE = { Maybe: 'doc-needs-input', 'Picked up': 'status-accepted', Passed: '' };
+
+function shareDemoForm() {
+  const box = el('div', { class: 'update' });
+  const closed = () => box.replaceChildren(
+    el('button', { class: 'primary small', type: 'button', onclick: open }, 'Share a demo'));
+  function open() {
+    const title = el('input', { type: 'text', maxlength: '120', placeholder: 'Song title', required: true });
+    const link = el('input', { type: 'url', maxlength: '500', placeholder: 'Boombox or Google Drive link (https://…)', required: true });
+    const note = el('textarea', { rows: '3', maxlength: '1000', placeholder: 'What should the crew listen for? (optional)' });
+    const msg = el('p', { class: 'error small', hidden: true });
+    const send = el('button', { class: 'primary small', type: 'submit' }, 'Share with the crew');
+    box.replaceChildren(el('form', {
+      class: 'update-form',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const row = { title: title.value.trim(), link: link.value.trim(), note: note.value.trim() || null };
+        if (!row.title) { msg.textContent = 'Give it a title.'; msg.hidden = false; return; }
+        if (!/^https:\/\//i.test(row.link)) { msg.textContent = 'Links need to start with https://'; msg.hidden = false; return; }
+        send.disabled = true;
+        const { error } = await supabase.from('demos').insert(row);
+        if (error) { send.disabled = false; msg.textContent = `Couldn’t share that: ${error.message}`; msg.hidden = false; return; }
+        await refresh();
+      },
+    },
+    el('p', { class: 'small muted' }, 'The whole crew sees it in Crew news. For a Google Drive file, set sharing to anyone with the link first.'),
+    title, link, note, msg,
+    el('div', { class: 'row' }, send, el('button', { class: 'link', type: 'button', onclick: closed }, 'Cancel'))));
+    title.focus();
+  }
+  closed();
+  return box;
+}
+
+function reactionControls(dm, mine) {
+  const box = el('div', {});
+  const draw = (picked, commentOpen) => {
+    const comment = el('textarea', { rows: '2', maxlength: '280', placeholder: 'A line for whoever shared it (optional)' });
+    if (mine?.comment) comment.value = mine.comment;
+    const save = async (reaction, withComment) => {
+      const row = { demo_id: dm.id, reaction, comment: withComment ? (comment.value.trim() || null) : (mine?.comment ?? null) };
+      const { error } = await supabase.from('demo_reactions').upsert(row, { onConflict: 'demo_id,artist_id' });
+      if (error) { box.append(el('p', { class: 'error small' }, `Couldn’t save that: ${error.message}`)); return; }
+      await refresh();
+    };
+    box.replaceChildren(...[
+      el('div', { class: 'reactions' }, REACTIONS.map(([k, label]) =>
+        el('button', { class: `reaction${picked === k ? ' on' : ''}`, type: 'button', 'aria-pressed': String(picked === k),
+          onclick: () => (viewingAs() ? null : save(k, false)) },
+        `${label} `, el('span', { class: 'reaction-count' }, String(dm[k] ?? 0))))),
+      picked && !commentOpen && !viewingAs() && el('button', { class: 'link', type: 'button', onclick: () => draw(picked, true) },
+        mine?.comment ? 'Edit your comment' : 'Add a comment'),
+      commentOpen && el('div', { class: 'update-form' }, comment,
+        el('div', { class: 'row' },
+          el('button', { class: 'primary small', type: 'button', onclick: () => save(picked, true) }, 'Send'),
+          el('button', { class: 'link', type: 'button', onclick: () => draw(picked, false) }, 'Cancel'))),
+      mine?.comment && !commentOpen && el('p', { class: 'small muted' }, `Your comment: ${mine.comment}`)].filter(Boolean));
+  };
+  draw(mine?.reaction ?? null, false);
+  return box;
+}
+
+function demoRow(dm, d) {
+  const mineDemo = dm.artist_id === me.id;
+  const mine = (d.demoReactions ?? []).find((r) => r.demo_id === dm.id && r.artist_id === me.id);
+  const comments = (d.demoComments ?? []).filter((c) => c.demo_id === dm.id);
+  return el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, dm.title),
+      el('span', { class: 'take-name' }, `${mineDemo ? 'You' : dm.artist_name ?? 'A member'} · ${fmtDate(dm.created_at)}`)),
+    el('div', { class: 'take-meta' },
+      linkButton(dm.link, 'Listen'),
+      dm.status && dm.status !== 'New' && el('span', { class: `tag ${DEMO_STATUS_TONE[dm.status] ?? ''}` }, dm.status),
+      dm.hidden && el('span', { class: 'tag' }, 'Hidden')),
+    richText('p', { class: 'ann-body' }, dm.note),
+    mineDemo
+      ? el('p', { class: 'small muted' }, REACTIONS.map(([k, label]) => `${label} ${dm[k] ?? 0}`).join(' · '))
+      : reactionControls(dm, mine),
+    comments.length > 0 && el('ul', { class: 'demo-comments' }, comments.map((c) =>
+      el('li', {}, el('strong', {}, c.who), ` (${REACTIONS.find(([k]) => k === c.reaction)?.[1] ?? c.reaction}): ${c.comment}`))));
+}
+
+function demosOf(d) {
+  const summary = new Map((d.demoSummary ?? []).map((x) => [x.demo_id, x]));
+  return (d.demos ?? []).map((dm) => ({ ...dm, ...(summary.get(dm.id) ?? {}), id: dm.id }))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+// Demos from others shared in the last 30 days that you haven't reacted to yet.
+function demosToHear(d) {
+  const reacted = new Set((d.demoReactions ?? []).filter((r) => r.artist_id === me.id).map((r) => r.demo_id));
+  const since = Date.now() - 30 * 864e5;
+  return demosOf(d).filter((x) => x.artist_id !== me.id && !reacted.has(x.id) && !x.hidden && new Date(x.created_at) > since);
+}
+
+function demosPanel(d) {
+  const all = demosOf(d);
+  const hear = new Set(demosToHear(d).map((x) => x.id));
+  const fresh = all.filter((x) => hear.has(x.id));
+  const rest = all.filter((x) => !hear.has(x.id));
+  return panel('Demos', fresh.length > 0 && countTag(fresh.length, true),
+    el('p', { class: 'small muted' }, 'New music from the crew, for crew consideration. Listen, react, and leave a line for whoever shared it.'),
+    !viewingAs() && shareDemoForm(),
+    fresh.length > 0 && group('blue', 'New to you', groupCount(fresh.length), el('ul', { class: 'takes' }, fresh.map((x) => demoRow(x, d)))),
+    rest.length > 0 && group('gray', fresh.length ? 'Earlier' : 'Shared demos', groupCount(rest.length), el('ul', { class: 'takes' }, rest.map((x) => demoRow(x, d)))),
+    all.length === 0 && el('p', { class: 'muted' }, 'No demos yet. Be the first.'));
+}
+
 function newsView(d) {
   const ackBy = new Map(d.acks.map((k) => [k.announcement_id, k]));
   const { unread, read } = splitRead(d.announcements.filter((a) => !isRequest(a)), ackBy);
-  return panel('Crew news', unread.length > 0 && countTag(unread.length, true),
+  return [panel('Crew news', unread.length > 0 && countTag(unread.length, true),
     unread.length
       ? group('amber', 'New', groupCount(unread.length), el('ul', { class: 'takes' }, unread.map((a) => announcementRow(a, null))))
       : el('p', { class: 'muted' }, 'You’re caught up.'),
     read.length > 0 && group('gray', 'Read', groupCount(read.length),
       el('details', {},
         el('summary', {}, 'Show read news'),
-        el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id)))))));
+        el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id))))))),
+  demosPanel(d)];
 }
 
 const crewTasksOf = (d) => d.tasks.filter((k) => k.is_crew && !(k.assignee_ids ?? []).includes(me.id));
@@ -771,7 +885,7 @@ function issueControl(song) {
         return;
       }
       box.replaceChildren(el('p', { class: 'pending small' },
-        el('strong', {}, data), ` issued. It reaches Notion within 30 minutes. `, copyButton(data)));
+        el('strong', {}, data), ` issued. It reaches Notion within 10 minutes. `, copyButton(data)));
       loadIsrc().then(draw);
     });
     box.replaceChildren(el('div', { class: 'update-form' },
@@ -856,6 +970,60 @@ const MIX_GROUPS = [
   { order: 5, tone: 'red', title: 'Waiting on mix funding' },
 ];
 
+const MIX_EDIT_STAGES = ['Awaiting Mix Funding', 'Mixing Prep', 'Mixing', 'Mastering', 'Re-Mastering', 'Release Ready'];
+const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
+
+// Edit a queued song: stage, mixer, mastering engineer. Goes to Notion on the next sync.
+function mixEditor(q) {
+  const box = el('div', { class: 'update' });
+  const people = current.mixPeople ?? [];
+  const closed = () => box.replaceChildren(
+    el('button', { class: 'ghost', type: 'button', onclick: open }, 'Edit'));
+  function picks(name, filterFn, chosen) {
+    return el('fieldset', { class: 'picks' }, el('legend', {}, name),
+      people.filter((x) => filterFn(x) || chosen.includes(x.id)).map((x) =>
+        el('label', { class: 'pick' }, el('input', { type: 'checkbox', value: x.id, ...(chosen.includes(x.id) && { checked: true }) }), ` ${x.name}`)));
+  }
+  function open() {
+    const stage = el('select', {}, MIX_EDIT_STAGES.map((st) => el('option', { value: st, ...(st === q.stage && { selected: true }) }, st)));
+    const mixers = picks('Mixing', (x) => x.mixes, q.mixer_ids ?? []);
+    const masters = picks('Mastering', (x) => x.masters, q.mastering_ids ?? []);
+    const msg = el('p', { class: 'error small', hidden: true });
+    const send = el('button', { class: 'primary small', type: 'submit' }, 'Save');
+    const checked = (fs) => [...fs.querySelectorAll('input:checked')].map((i) => i.value);
+    box.replaceChildren(el('form', {
+      class: 'update-form',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const row = { song_id: q.song_id };
+        if (stage.value !== q.stage) row.new_stage = stage.value;
+        const m = checked(mixers), ms = checked(masters);
+        if (!sameSet(m, q.mixer_ids ?? [])) row.mixer_ids = m;
+        if (!sameSet(ms, q.mastering_ids ?? [])) row.mastering_ids = ms;
+        if (Object.keys(row).length === 1) { msg.textContent = 'Nothing changed.'; msg.hidden = false; return; }
+        send.disabled = true;
+        const { error } = await supabase.from('song_updates').insert(row);
+        if (error) { send.disabled = false; msg.textContent = `Couldn’t save that: ${error.message}`; msg.hidden = false; return; }
+        await refresh();
+      },
+    },
+    el('label', { class: 'small' }, 'Stage ', stage), mixers, masters, msg,
+    el('div', { class: 'row' }, send, el('button', { class: 'link', type: 'button', onclick: closed }, 'Cancel'))));
+  }
+  closed();
+  return box;
+}
+
+function pendingMix(q) {
+  const u = q.pending;
+  if (!u) return null;
+  const names = new Map((current.mixPeople ?? []).map((x) => [x.id, x.name]));
+  const list = (ids) => (ids.length ? ids.map((id) => names.get(id) ?? 'someone').join(', ') : 'nobody');
+  const parts = [u.stage && `stage to ${u.stage}`, u.mixer_ids && `mixer to ${list(u.mixer_ids)}`, u.mastering_ids && `mastering to ${list(u.mastering_ids)}`].filter(Boolean);
+  if (u.attempts >= 5) return el('p', { class: 'error small' }, 'That change didn’t reach Notion. Tell Shaah so he can check it.');
+  return el('p', { class: 'pending small' }, `${u.by ?? 'Someone'} set ${parts.join(', ')}. It reaches Notion within 10 minutes.`);
+}
+
 function mixRow(q) {
   const owed = (q.owed ?? []).filter((o) => o.status !== 'Submitted');
   const inForReview = (q.owed ?? []).filter((o) => o.status === 'Submitted');
@@ -870,7 +1038,9 @@ function mixRow(q) {
     owed.length > 0 && el('p', { class: 'take-notes' },
       'Still owed: ', owed.map((o) => `${o.type ?? 'Deliverable'} from ${o.who}`).join(', ')),
     inForReview.length > 0 && el('p', { class: 'take-notes' },
-      'In, waiting on review: ', inForReview.map((o) => `${o.type ?? 'Deliverable'} from ${o.who}`).join(', ')));
+      'In, waiting on review: ', inForReview.map((o) => `${o.type ?? 'Deliverable'} from ${o.who}`).join(', ')),
+    pendingMix(q),
+    !viewingAs() && !q.pending && mixEditor(q));
 }
 
 function mixView(d) {
@@ -881,7 +1051,7 @@ function mixView(d) {
     jumpCards(groups.map((g) => ({ title: g.title, count: g.rows.length, target: `mix-${g.order}`, state: g.order === 1 ? 'hot' : null }))),
     panel('Mix queue', countTag(q.length),
       el('p', { class: 'small muted' }, q.length
-        ? `${q.length} songs in a mix stage${blocked ? `, ${blocked} still waiting on a deliverable` : ''}. Change a song's stage in Notion and it moves here within 30 minutes.`
+        ? `${q.length} songs in a mix stage${blocked ? `, ${blocked} still waiting on a deliverable` : ''}. Tap Edit to change a song's stage, mixer or mastering engineer. Notion catches up within 10 minutes.`
         : 'Nothing in a mix stage right now.'),
       ...groups.map((g) => anchored(`mix-${g.order}`,
         group(g.tone, g.title, groupCount(g.rows.length), el('ul', { class: 'takes' }, g.rows.map(mixRow)))))),
@@ -1144,7 +1314,12 @@ function homeView(d) {
     tile('owe', 'What you owe', String(o.count),
       o.overdue ? 'Something’s overdue' : o.count ? 'Waiting on you' : 'All clear',
       o.overdue ? 'bad' : o.count ? 'hot' : null),
-    tile('news', 'Crew news', String(news.unread.length), news.unread.length ? 'Unread' : 'Caught up', news.unread.length ? 'hot' : null),
+    (() => {
+      const demos = demosToHear(d).length;
+      const n = news.unread.length + demos;
+      const sub = demos && news.unread.length ? `Unread, ${demos} new demo${demos === 1 ? '' : 's'}` : demos ? `${demos} new demo${demos === 1 ? '' : 's'}` : news.unread.length ? 'Unread' : 'Caught up';
+      return tile('news', 'Crew news', String(n), sub, n ? 'hot' : null);
+    })(),
     tile('crew', 'Crew tasks', String(crewOpen), crewOpen ? 'Open' : 'None open'),
     (() => {
       const total = Math.max(d.allProjects?.length ?? 0, projects.length);
@@ -1283,7 +1458,10 @@ async function loadIsrc() {
 }
 async function loadMixQueue() {
   if (!me?.mix_queue || !current) return;
-  current.mixQueue = await optionalRows(supabase.rpc('mix_queue'), 'mix queue');
+  [current.mixQueue, current.mixPeople] = await Promise.all([
+    optionalRows(supabase.rpc('mix_queue'), 'mix queue'),
+    optionalRows(supabase.rpc('mix_people'), 'mix people'),
+  ]);
 }
 async function loadLeadership() {
   if (!me?.leadership || !current) return;
@@ -1295,7 +1473,7 @@ async function loadLeadership() {
 }
 
 async function refresh() {
-  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects, effortTakes] = await Promise.all([
+  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects, effortTakes, demos, demoSummary, demoReactions, demoComments] = await Promise.all([
     supabase.from('takes')
       .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
       .order('due_date', { ascending: true, nullsFirst: false }),
@@ -1314,6 +1492,12 @@ async function refresh() {
     // Every GRYSKLL project, so the whole crew sees what's in the pipeline.
     optionalRows(supabase.from('project_index').select('*'), 'all projects'),
     optionalRows(supabase.rpc('group_effort_takes'), 'group efforts'),
+    // Demos the crew shared, their reaction counts, your own reactions, and
+    // comments on your demos (or every demo, for Leadership).
+    optionalRows(supabase.from('demos').select('id, artist_id, title, link, note, created_at, status, hidden'), 'demos'),
+    optionalRows(supabase.rpc('demo_summary'), 'demo summary'),
+    optionalRows(supabase.from('demo_reactions').select('demo_id, artist_id, reaction, comment'), 'demo reactions'),
+    optionalRows(supabase.rpc('demo_comments'), 'demo comments'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
@@ -1321,6 +1505,7 @@ async function refresh() {
   pendingByItem = new Map(updates.map((u) => [`${u.item_type}:${u.item_id}`, u]));
   current = {
     takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects, allProjects, effortTakes,
+    demos, demoSummary, demoReactions, demoComments,
     songs: collectSongs(creditsRes.data, takesRes.data),
   };
   await Promise.all([loadIsrc(), loadLeadership(), loadMixQueue()]);

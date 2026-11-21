@@ -335,3 +335,17 @@ body.viewing-as .update { display: none; }
 .link-button::after { content: '↗'; font-size: 11px; opacity: 0.8; }
 .link-button[href$=".html"]::after, .link-button[href^="#"]::after { content: none; }
 .link-button:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* v0.4.25: Mix queue edits, demos */
+.picks { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.picks legend { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.pick { font-size: 14px; display: inline-flex; align-items: center; gap: 4px; }
+.update-form select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; margin-left: 6px; }
+.reactions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
+.reaction { background: none; color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.reaction.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.reaction-count { color: var(--muted); font-weight: 600; margin-left: 2px; }
+.reaction.on .reaction-count { color: var(--accent); }
+.demo-comments { list-style: none; padding: 0; margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.demo-comments li { padding: 4px 0; border-top: 1px solid var(--line); }
+.demo-comments strong { color: var(--text); }
