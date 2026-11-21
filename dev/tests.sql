@@ -35,6 +35,11 @@ insert into public.project_index (id, name, leadership_only, synced_at) values
 
 set role authenticated;
 
+-- The profile the site loads at sign-in. Every column it asks for must be readable.
+select pg_temp.login('one@test');
+select pg_temp.check('members can read the profile columns the site loads',
+  (select count(*) from (select id, name, leadership, isrc_admin, mix_queue from public.artists) x) = 1);
+
 -- Signed out, or signed in but not linked: nothing at all.
 select pg_temp.login(null);
 select pg_temp.check('signed out sees no artists', (select count(*) from public.artists) = 0);
