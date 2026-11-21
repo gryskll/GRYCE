@@ -733,17 +733,31 @@ function driveFileId(url) {
     return u.pathname.match(/\/file\/d\/([\w-]{10,})/)?.[1] ?? u.searchParams.get('id');
   } catch { return null; }
 }
+// One tap plays: gryCE's own audio player streams the file from Google Drive
+// (public files only, through the restricted API key). If that fails, it falls
+// back to Drive's preview player, which needs its own tap.
+let playingAudio = null;
 function demoPlayer(dm) {
   const id = driveFileId(dm.link);
   if (!id) return linkButton(dm.link, 'Listen');
   const slot = el('div', { class: 'demo-player', hidden: true });
+  const fallback = (note) => slot.replaceChildren(
+    el('p', { class: 'small muted' }, note),
+    el('iframe', { src: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`, title: `Play ${dm.title}`, allow: 'autoplay; fullscreen' }));
   const btn = el('button', { class: 'ghost small play-btn', type: 'button', onclick: () => {
-    const opening = slot.hidden;
-    slot.replaceChildren(opening
-      ? el('iframe', { src: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`, title: `Play ${dm.title}`, allow: 'autoplay; fullscreen', loading: 'lazy' })
-      : '');
-    slot.hidden = !opening;
-    btn.textContent = opening ? '■ Close player' : '▶ Play';
+    if (!slot.hidden) {
+      slot.querySelector('audio')?.pause();
+      slot.replaceChildren(); slot.hidden = true; btn.textContent = '▶ Play';
+      return;
+    }
+    slot.hidden = false; btn.textContent = '■ Close player';
+    if (!GOOGLE_API_KEY) return fallback('Tap play in the player below.');
+    const audio = el('audio', { controls: true, preload: 'auto',
+      src: `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${encodeURIComponent(GOOGLE_API_KEY)}` });
+    audio.onerror = () => fallback('gryCE’s player couldn’t load this one. Tap play in Drive’s player below.');
+    audio.onplay = () => { if (playingAudio && playingAudio !== audio) playingAudio.pause(); playingAudio = audio; };
+    slot.replaceChildren(audio);
+    audio.play().catch(() => {});
   } }, '▶ Play');
   return [btn, slot];
 }
