@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.31, November 20, 2026
+- Upload from your device is on in Share a demo. The first time, Google asks you to let gryCE save files to your Drive.
+
 ## v0.4.30, November 20, 2026
 - Share a demo is a big green card on Home and in Crew news.
 - Upload from your device: the track goes into a "GRYSKLL demos (gryCE)" folder in your own Google Drive and its link fills in for you. Turns on once Google Drive access is set up for gryCE.
