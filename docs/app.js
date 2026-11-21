@@ -680,7 +680,9 @@ async function checkDriveLink(url) {
     res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=mimeType&supportsAllDrives=true&key=${encodeURIComponent(GOOGLE_API_KEY)}`,
       { headers: key ? { 'X-Goog-Drive-Resource-Keys': `${id}/${key}` } : {} });
   } catch { return null; }
-  if (res.status === 404 || res.status === 403) {
+  // 404 means Google won't show the file to someone outside. A 403 is about the
+  // key itself (wrong site, API off), so don't blame the member's sharing.
+  if (res.status === 404) {
     return 'The crew can’t open that file yet. In Google Drive, open the file, tap Share, set General access to “Anyone with the link” (Viewer), then share it here again.';
   }
   if (!res.ok) return null;
