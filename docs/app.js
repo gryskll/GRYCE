@@ -6,7 +6,7 @@
 // See DEVELOPERS.md for the map, and dev/preview.html to run it with made-up data.
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, GOOGLE_CLIENT_ID } from './config.js';
 import { helpView } from './help-full.js';
 
 const app = document.getElementById('app');
@@ -433,35 +433,148 @@ const REACTIONS = [['feeling', 'Feeling it'], ['want_on', 'Want on it'], ['not_f
 const DEMO_ROLES = [['Producer', 'the beat or track (Producer)'], ['Vocals', 'vocals'], ['Producer and vocals', 'the beat and vocals']];
 const DEMO_STATUS_TONE = { Maybe: 'doc-needs-input', 'Picked up': 'status-accepted', Passed: '' };
 
-function shareDemoForm() {
-  const box = el('div', { class: 'update' });
+// Upload to the member's own Google Drive ----------------------------------
+// Asks Google for permission only when someone taps Upload (drive.file: gryCE
+// can see only files it creates). The file goes into a "GRYSKLL demos (gryCE)"
+// folder in their Drive, is shared as anyone-with-the-link can view, and its
+// link fills in the form. Nothing passes through gryCE's own servers.
+const DRIVE_FOLDER = 'GRYSKLL demos (gryCE)';
+let gisLoading = null;
+function loadGis() {
+  gisLoading ??= new Promise((ok, bad) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://accounts.google.com/gsi/client';
+    sc.onload = ok; sc.onerror = () => bad(new Error('Couldn’t reach Google.'));
+    document.head.append(sc);
+  });
+  return gisLoading;
+}
+let driveToken = null;
+async function driveAccess(email) {
+  if (driveToken && driveToken.expires > Date.now()) return driveToken.value;
+  await loadGis();
+  return new Promise((ok, bad) => {
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      hint: email,
+      callback: (r) => {
+        if (r.error) return bad(new Error(r.error_description || r.error));
+        driveToken = { value: r.access_token, expires: Date.now() + (Number(r.expires_in) - 60) * 1000 };
+        ok(r.access_token);
+      },
+      error_callback: (e) => bad(new Error(e?.message || 'Google permission was closed.')),
+    });
+    client.requestAccessToken({ prompt: '' });
+  });
+}
+async function driveFetch(token, url, opts = {}) {
+  const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...(opts.headers ?? {}) } });
+  if (!res.ok) throw new Error(`Google Drive said ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return res;
+}
+async function demoFolder(token) {
+  const q = encodeURIComponent(`mimeType='application/vnd.google-apps.folder' and name='${DRIVE_FOLDER}' and trashed=false`);
+  const found = await (await driveFetch(token, `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`)).json();
+  if (found.files?.length) return found.files[0].id;
+  const made = await (await driveFetch(token, 'https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FOLDER, mimeType: 'application/vnd.google-apps.folder' }),
+  })).json();
+  return made.id;
+}
+// Resumable upload with progress, then share it and return its link.
+async function uploadToDrive(file, onProgress) {
+  const token = await driveAccess(me.email ?? undefined);
+  const folder = await demoFolder(token);
+  const start = await driveFetch(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Upload-Content-Type': file.type || 'application/octet-stream', 'X-Upload-Content-Length': String(file.size) },
+    body: JSON.stringify({ name: file.name, parents: [folder] }),
+  });
+  const session = start.headers.get('Location');
+  const id = await new Promise((ok, bad) => {
+    const x = new XMLHttpRequest();
+    x.open('PUT', session);
+    x.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
+    x.onload = () => (x.status < 300 ? ok(JSON.parse(x.responseText).id) : bad(new Error(`Upload stopped (${x.status}). Try again.`)));
+    x.onerror = () => bad(new Error('Upload stopped. Check your connection and try again.'));
+    x.send(file);
+  });
+  await driveFetch(token, `https://www.googleapis.com/drive/v3/files/${id}/permissions`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+  });
+  const info = await (await driveFetch(token, `https://www.googleapis.com/drive/v3/files/${id}?fields=webViewLink`)).json();
+  return info.webViewLink;
+}
+
+// Share a demo: a big green card that opens the form. On Home and in Crew news.
+function shareDemoCard() {
+  const box = el('div', { class: 'share-demo' });
   const closed = () => box.replaceChildren(
-    el('button', { class: 'primary small', type: 'button', onclick: open }, 'Share a demo'));
+    el('button', { class: 'share-card', type: 'button', onclick: open },
+      el('img', { class: 'share-card-mark', src: new URL('img/skull.png', import.meta.url).href, alt: '', width: '56', height: '79' }),
+      el('span', { class: 'share-card-text' },
+        el('span', { class: 'share-card-title' }, 'Share a demo'),
+        el('span', { class: 'share-card-sub' }, 'Got something new? Put it in front of the crew.')),
+      el('span', { class: 'share-card-go', 'aria-hidden': 'true' }, '+')));
   function open() {
     const title = el('input', { type: 'text', maxlength: '120', placeholder: 'Song title', required: true });
-    const link = el('input', { type: 'url', maxlength: '500', placeholder: 'Boombox or Google Drive link (https://…)', required: true });
+    const link = el('input', { type: 'url', maxlength: '500', placeholder: 'Boombox or Google Drive link (https://…)' });
     const note = el('textarea', { rows: '3', maxlength: '1000', placeholder: 'What should the crew listen for? (optional)' });
     const role = el('select', { required: true },
       el('option', { value: '' }, 'Choose one'),
       DEMO_ROLES.map(([v, label]) => el('option', { value: v }, label)));
     const msg = el('p', { class: 'error small', hidden: true });
     const send = el('button', { class: 'primary small', type: 'submit' }, 'Share with the crew');
+    const fail = (t) => { msg.textContent = t; msg.hidden = false; };
+
+    // Upload from your device (only when a Google client ID is set).
+    const status = el('p', { class: 'small muted', hidden: true });
+    const picker = el('input', { type: 'file', accept: 'audio/*,video/*,.wav,.mp3,.m4a,.aif,.aiff,.flac', hidden: true });
+    const upBtn = GOOGLE_CLIENT_ID && el('button', { class: 'ghost', type: 'button', onclick: () => picker.click() }, 'Upload from your device');
+    picker.onchange = async () => {
+      const file = picker.files?.[0];
+      if (!file) return;
+      msg.hidden = true;
+      upBtn.disabled = true; send.disabled = true;
+      status.hidden = false; status.textContent = 'Asking Google for permission…';
+      try {
+        const url = await uploadToDrive(file, (f) => { status.textContent = `Uploading to your Google Drive… ${Math.round(f * 100)}%`; });
+        link.value = url;
+        if (!title.value.trim()) title.value = file.name.replace(/\.[^.]+$/, '');
+        status.textContent = `Uploaded to your Drive, in “${DRIVE_FOLDER}”. Anyone with the link can listen.`;
+      } catch (e) {
+        status.hidden = true;
+        fail(`Upload didn’t finish: ${e.message}`);
+      } finally {
+        upBtn.disabled = false; send.disabled = false;
+      }
+    };
+
     box.replaceChildren(el('form', {
-      class: 'update-form',
+      class: 'update-form share-form',
       onsubmit: async (e) => {
         e.preventDefault();
         const row = { title: title.value.trim(), link: link.value.trim(), note: note.value.trim() || null, credit_role: role.value || null };
-        if (!row.title) { msg.textContent = 'Give it a title.'; msg.hidden = false; return; }
-        if (!row.credit_role) { msg.textContent = 'Pick how you’d be credited if it becomes a song.'; msg.hidden = false; return; }
-        if (!/^https:\/\//i.test(row.link)) { msg.textContent = 'Links need to start with https://'; msg.hidden = false; return; }
+        if (!row.title) return fail('Give it a title.');
+        if (!row.link) return fail(GOOGLE_CLIENT_ID ? 'Upload the file or paste a link.' : 'Paste a link to the track.');
+        if (!/^https:\/\//i.test(row.link)) return fail('Links need to start with https://');
+        if (!row.credit_role) return fail('Pick how you’d be credited if it becomes a song.');
         send.disabled = true;
         const { error } = await supabase.from('demos').insert(row);
-        if (error) { send.disabled = false; msg.textContent = `Couldn’t share that: ${error.message}`; msg.hidden = false; return; }
+        if (error) { send.disabled = false; return fail(`Couldn’t share that: ${error.message}`); }
         await refresh();
       },
     },
-    el('p', { class: 'small muted' }, 'The whole crew sees it in Crew news. For a Google Drive file, set sharing to anyone with the link first.'),
-    title, link, note,
+    el('h3', { class: 'share-form-title' }, 'Share a demo'),
+    el('p', { class: 'small muted' }, GOOGLE_CLIENT_ID
+      ? 'Upload the track to your own Google Drive, or paste a Boombox or Drive link. The whole crew sees it in Crew news.'
+      : 'Paste a Boombox or Google Drive link. For a Drive file, set sharing to anyone with the link first. The whole crew sees it in Crew news.'),
+    title,
+    upBtn && el('div', { class: 'row' }, upBtn, picker),
+    status,
+    link, note,
     el('label', { class: 'small' }, 'If it becomes a GRYSKLL song, credit me for ', role),
     msg,
     el('div', { class: 'row' }, send, el('button', { class: 'link', type: 'button', onclick: closed }, 'Cancel'))));
@@ -539,7 +652,7 @@ function demosPanel(d) {
   const rest = all.filter((x) => !hear.has(x.id));
   return panel('Demos', fresh.length > 0 && countTag(fresh.length, true),
     el('p', { class: 'small muted' }, 'New music from the crew, for crew consideration. Listen, react, and leave a line for whoever shared it.'),
-    !viewingAs() && shareDemoForm(),
+    !viewingAs() && shareDemoCard(),
     fresh.length > 0 && group('blue', 'New to you', groupCount(fresh.length), el('ul', { class: 'takes' }, fresh.map((x) => demoRow(x, d)))),
     rest.length > 0 && group('gray', fresh.length ? 'Earlier' : 'Shared demos', groupCount(rest.length), el('ul', { class: 'takes' }, rest.map((x) => demoRow(x, d)))),
     all.length === 0 && el('p', { class: 'muted' }, 'No demos yet. Be the first.'));
@@ -1471,7 +1584,7 @@ function draw() {
       el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
     show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `Peace, ${me.name}`), homeHelp()),
-      !viewingAs() && el('div', { class: 'home-share' }, shareDemoForm()),
+      !viewingAs() && el('div', { class: 'home-share' }, shareDemoCard()),
       homeView(current));
   }
   window.scrollTo(0, 0);
@@ -1563,7 +1676,7 @@ async function render(session) {
   }
   if (meErr) return show(el('p', { class: 'error' }, `Couldn’t load your profile: ${meErr.message}`));
   if (!data) return notLinkedView(email);
-  me = data;
+  me = { ...data, email };   // the Google sign-in email, used as a hint when asking Google for Drive access
   support = null;
   {
     const { data: st, error: stErr } = await supabase.rpc('support_status');
