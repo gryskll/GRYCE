@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.34, November 20, 2026
+- Demos are Google Drive only for now. If a pasted Drive link isn't open to anyone with the link, gryCE says so and how to fix it before sharing.
+- Reactions, comments and demo notes are bigger and labeled, so they're hard to miss.
+
 ## v0.4.33, November 20, 2026
 - Demos on Google Drive play right in gryCE. Tap Play under the demo. Boombox links still open Boombox.
 

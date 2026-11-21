@@ -7,3 +7,8 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_-9le7LXWu_jMfsFglx5hPA_k
 // design (it's in every Google sign-in page). Leave empty to hide the upload button.
 // It must be the client whose Authorized JavaScript origins include this site.
 export const GOOGLE_CLIENT_ID = '276014829574-vjc61m2fq7t7skfei2uf2m7pr83ophh2.apps.googleusercontent.com';
+
+// Google API key that checks a pasted Drive link is open to "Anyone with the link"
+// before a demo is shared. Public by design: restrict it to the Google Drive API
+// and to this site in Google Cloud. Leave empty to skip the check.
+export const GOOGLE_API_KEY = '';

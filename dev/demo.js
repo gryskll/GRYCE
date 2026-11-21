@@ -85,7 +85,7 @@ const tables = {
   isrc_codes: [],
   demos: [
     { id: 'dm1', artist_id: 'a2', title: 'Rooftop Sketch', link: 'https://drive.google.com/file/d/demo-file-id-not-real/view', note: 'Rough idea, needs a hook. Listen from 0:40.', created_at: new Date(Date.now() - 864e5).toISOString(), status: 'New', hidden: false },
-    { id: 'dm2', artist_id: 'me', title: 'Slow Burn', link: 'https://boombox.io/demo', note: null, created_at: new Date(Date.now() - 5 * 864e5).toISOString(), status: 'Picked up', hidden: false, credit_role: 'Producer', song_id: 's-z' },
+    { id: 'dm2', artist_id: 'me', title: 'Slow Burn', link: 'https://drive.google.com/file/d/demo-file-id-two-fake/view', note: null, created_at: new Date(Date.now() - 5 * 864e5).toISOString(), status: 'Picked up', hidden: false, credit_role: 'Producer', song_id: 's-z' },
   ],
   demo_reactions: [],
   documents: [
