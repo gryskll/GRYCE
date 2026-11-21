@@ -450,22 +450,38 @@ function loadGis() {
   return gisLoading;
 }
 let driveToken = null;
-async function driveAccess(email) {
-  if (driveToken && driveToken.expires > Date.now()) return driveToken.value;
+let tokenClient = null;
+let tokenWaiter = null;
+const hasDriveToken = () => !!(driveToken && driveToken.expires > Date.now());
+// Load Google's script early so the permission popup can open straight from a
+// click. Browsers block popups that open after anything asynchronous.
+async function prepareDrive(email) {
   await loadGis();
+  tokenClient ??= window.google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    hint: email,
+    callback: (r) => {
+      const w = tokenWaiter; tokenWaiter = null;
+      if (r.error) return w?.bad(new Error(r.error_description || r.error));
+      driveToken = { value: r.access_token, expires: Date.now() + (Number(r.expires_in) - 60) * 1000 };
+      w?.ok(r.access_token);
+    },
+    error_callback: (e) => {
+      const w = tokenWaiter; tokenWaiter = null;
+      w?.bad(new Error(e?.type === 'popup_failed_to_open'
+        ? 'Your browser blocked Google’s permission window. Allow popups for gryce.gryskll.com and try again.'
+        : 'Google permission window was closed.'));
+    },
+  });
+}
+// Must be called synchronously inside a click handler.
+function askDrivePermission() {
   return new Promise((ok, bad) => {
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive.file',
-      hint: email,
-      callback: (r) => {
-        if (r.error) return bad(new Error(r.error_description || r.error));
-        driveToken = { value: r.access_token, expires: Date.now() + (Number(r.expires_in) - 60) * 1000 };
-        ok(r.access_token);
-      },
-      error_callback: (e) => bad(new Error(e?.message || 'Google permission was closed.')),
-    });
-    client.requestAccessToken({ prompt: '' });
+    if (!tokenClient) return bad(new Error('Google isn’t ready yet. Try again in a second.'));
+    tokenWaiter?.bad(new Error('Asked again.'));
+    tokenWaiter = { ok, bad };
+    tokenClient.requestAccessToken({ prompt: '' });
   });
 }
 async function driveFetch(token, url, opts = {}) {
@@ -485,7 +501,8 @@ async function demoFolder(token) {
 }
 // Resumable upload with progress, then share it and return its link.
 async function uploadToDrive(file, onProgress) {
-  const token = await driveAccess(me.email ?? undefined);
+  if (!hasDriveToken()) throw new Error('Google Drive permission expired. Tap Connect Google Drive again.');
+  const token = driveToken.value;
   const folder = await demoFolder(token);
   const start = await driveFetch(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', {
     method: 'POST',
@@ -530,25 +547,54 @@ function shareDemoCard() {
     const fail = (t) => { msg.textContent = t; msg.hidden = false; };
 
     // Upload from your device (only when a Google client ID is set).
+    // Step 1 asks Google for permission (a popup, so it has to come straight
+    // from a tap). Step 2 picks the file and uploads it with a progress bar.
     const status = el('p', { class: 'small muted', hidden: true });
+    const bar = el('progress', { class: 'upload-bar', max: '100', value: '0', hidden: true });
     const picker = el('input', { type: 'file', accept: 'audio/*,video/*,.wav,.mp3,.m4a,.aif,.aiff,.flac', hidden: true });
-    const upBtn = GOOGLE_CLIENT_ID && el('button', { class: 'ghost', type: 'button', onclick: () => picker.click() }, 'Upload from your device');
+    let upBtn = null;
+    const popupTip = el('p', { class: 'small muted popup-tip' },
+      'Heads up: Google opens a small window to ask permission the first time. If your browser blocks popups, allow them for gryce.gryskll.com (look for the blocked-popup icon in the address bar), then tap Upload again.');
+    const label = () => {
+      if (!upBtn) return;
+      upBtn.textContent = hasDriveToken() ? 'Choose a file to upload' : 'Upload from your device';
+      popupTip.hidden = hasDriveToken();
+    };
+    if (GOOGLE_CLIENT_ID) {
+      prepareDrive(me.email ?? undefined).catch(() => {});
+      upBtn = el('button', { class: 'ghost', type: 'button', onclick: () => {
+        msg.hidden = true;
+        if (hasDriveToken()) { picker.click(); return; }
+        status.hidden = false; status.textContent = 'Asking Google for permission to save to your Drive…';
+        askDrivePermission().then(() => {
+          label();
+          status.textContent = 'Google Drive connected. Tap “Choose a file to upload”.';
+        }).catch((e) => { status.hidden = true; fail(e.message); });
+      } });
+      label();
+    }
     picker.onchange = async () => {
       const file = picker.files?.[0];
+      picker.value = '';
       if (!file) return;
       msg.hidden = true;
       upBtn.disabled = true; send.disabled = true;
-      status.hidden = false; status.textContent = 'Asking Google for permission…';
+      status.hidden = false; status.textContent = `Uploading ${file.name} to your Google Drive… 0%`;
+      bar.hidden = false; bar.value = 0;
       try {
-        const url = await uploadToDrive(file, (f) => { status.textContent = `Uploading to your Google Drive… ${Math.round(f * 100)}%`; });
+        const url = await uploadToDrive(file, (f) => {
+          bar.value = Math.round(f * 100);
+          status.textContent = `Uploading ${file.name} to your Google Drive… ${Math.round(f * 100)}%`;
+        });
         link.value = url;
         if (!title.value.trim()) title.value = file.name.replace(/\.[^.]+$/, '');
-        status.textContent = `Uploaded to your Drive, in “${DRIVE_FOLDER}”. Anyone with the link can listen.`;
+        bar.value = 100;
+        status.textContent = `Uploaded to your Drive, in “${DRIVE_FOLDER}”. Anyone with the link can listen. Now tap Share with the crew.`;
       } catch (e) {
-        status.hidden = true;
+        status.hidden = true; bar.hidden = true;
         fail(`Upload didn’t finish: ${e.message}`);
       } finally {
-        upBtn.disabled = false; send.disabled = false;
+        upBtn.disabled = false; send.disabled = false; label();
       }
     };
 
@@ -573,7 +619,8 @@ function shareDemoCard() {
       : 'Paste a Boombox or Google Drive link. For a Drive file, set sharing to anyone with the link first. The whole crew sees it in Crew news.'),
     title,
     upBtn && el('div', { class: 'row' }, upBtn, picker),
-    status,
+    upBtn && popupTip,
+    status, bar,
     link, note,
     el('label', { class: 'small' }, 'If it becomes a GRYSKLL song, credit me for ', role),
     msg,
