@@ -1,0 +1,16 @@
+digraph R {
+  graph [rankdir=TB, fontname="Helvetica", nodesep=0.5, ranksep=0.35, pad=0.3, dpi=200];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10.5, fillcolor="#f4f4f4", color="#555555", margin="0.15,0.08"];
+  edge [color="#666666", fontname="Helvetica", fontsize=9];
+  b [label="Branch from main\nbump version.js\nCHANGELOG entry"];
+  l [label="Local checks\ndev/test-db.sh\ndev/preview.html"];
+  pr [label="Pull request", fillcolor="#eef3fb"];
+  t [label="Tests action\nmust pass"];
+  pv [label="Cloudflare preview\nlink"];
+  m [label="Squash merge", fillcolor="#eef3fb"];
+  d [label="Cloudflare Pages\ndeploys main"];
+  sql [label="Run migration in Supabase\n(only after Shaah says yes)", fillcolor="#fdeee8", color="#e08a5a"];
+  s [label="Run the sync by hand\ncheck the log"];
+  mr [label="Master Reference\nsuggestions + Decision Log", fillcolor="#fff7e6"];
+  b -> l -> pr; pr -> t; pr -> pv; t -> m; pv -> m; m -> d; m -> sql -> s -> mr;
+}
