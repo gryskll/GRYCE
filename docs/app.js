@@ -1529,11 +1529,12 @@ async function render(session) {
   // Leadership and ISRC Admin come with v0.4.1. Before its SQL runs, those columns
   // don't exist, so fall back to the basics.
   let { data, error: meErr } = await supabase.from('artists').select('id, name, leadership, isrc_admin, mix_queue').maybeSingle();
-  // Mix Queue comes with v0.4.24. Before its SQL runs, load without it.
-  if (meErr && /column/i.test(meErr.message)) {
+  // Mix Queue comes with v0.4.24. If the database doesn't have it yet, or
+  // doesn't let members read it yet, load without it.
+  if (meErr && /column|permission denied/i.test(meErr.message)) {
     ({ data, error: meErr } = await supabase.from('artists').select('id, name, leadership, isrc_admin').maybeSingle());
   }
-  if (meErr && /column/i.test(meErr.message)) {
+  if (meErr && /column|permission denied/i.test(meErr.message)) {
     ({ data, error: meErr } = await supabase.from('artists').select('id, name').maybeSingle());
   }
   if (meErr) return show(el('p', { class: 'error' }, `Couldn’t load your profile: ${meErr.message}`));

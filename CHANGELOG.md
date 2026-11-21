@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.27, November 20, 2026
+- Fixed: gryCE couldn't load anyone's profile after the Mix queue release, because members weren't allowed to read the new Mix Queue checkbox. gryCE now loads without it if that happens.
+
 ## v0.4.26, November 20, 2026
 - Demos can become GRYSKLL songs. When you share a demo, you choose how you'd be credited if it's picked up: the beat or track, vocals, or both. When Leadership marks it Picked up in Notion, gryCE creates the song in Songs at Idea/Concept with your credit, and the demo shows what song it became.
 
