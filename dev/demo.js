@@ -43,7 +43,10 @@ const tables = {
   tasks: [
     { id: 'k1', name: 'Lyrics for the listening session', status: 'In progress', due_date: day(3), is_crew: true, assignee_ids: [],
       linked_take_ids: ['g1', 'g2', 'g3', 'g4'], gryce_note: 'Everyone types their lyrics into the shared sheet before the session.', link: 'https://example.com' },
-    { id: 'k2', name: 'Pick a cover photo', status: 'Not started', due_date: day(10), is_crew: false, assignee_ids: ['me'] },
+    { id: 'k2', name: 'Pick a cover photo', status: 'Not started', due_date: day(10), is_crew: false, assignee_ids: ['me'], project: 'Demo Album', priority: 'Now' },
+    { id: 'k4', name: 'Send multitracks to the mixer', status: 'Waiting on someone', is_crew: false, assignee_ids: ['me'], project: 'Demo Album', priority: 'This week', waiting_on: 'Bounces from the studio' },
+    { id: 'k5', name: 'Draft the merch plan', status: 'Not started', is_crew: false, assignee_ids: ['me'], project: 'Admin', priority: 'Later' },
+    { id: 'k6', name: 'Clean up old notes', status: 'Not started', is_crew: false, assignee_ids: ['me'] },
     { id: 'k3', name: 'Book the listening room', status: 'Waiting on someone', is_crew: true, assignee_ids: [] },
   ],
   announcements: [

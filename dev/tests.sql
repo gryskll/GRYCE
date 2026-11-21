@@ -231,3 +231,8 @@ update public.demos set song_id = '00000000-0000-0000-0000-0000000000b2' where t
 set role authenticated;
 select pg_temp.login('two@test');
 select pg_temp.check('the crew sees what song a demo became', (select song_name from public.demo_summary() s join public.demos d on d.id = s.demo_id where d.title = 'Demo Two') = 'Song Two');
+
+-- Task context columns are readable by the task's owner.
+select pg_temp.login('one@test');
+select pg_temp.check('members can read task project, priority and waiting on',
+  (select count(*) from (select project, priority, waiting_on from public.tasks) x) >= 0);

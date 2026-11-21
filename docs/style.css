@@ -349,3 +349,9 @@ body.viewing-as .update { display: none; }
 .demo-comments { list-style: none; padding: 0; margin: 8px 0 0; font-size: 14px; color: var(--muted); }
 .demo-comments li { padding: 4px 0; border-top: 1px solid var(--line); }
 .demo-comments strong { color: var(--text); }
+
+/* v0.4.28: tasks by project, Share a demo on Home */
+.sub-head { margin: 14px 0 2px; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: var(--text); text-transform: none; }
+.group .sub-head:first-of-type { margin-top: 4px; }
+.home-share { margin: 0 0 14px; }
+.home-share .update { margin-top: 0; }

@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.28, November 20, 2026
+- Your tasks are grouped by project under What you owe, with Now and This week first, and show who or what a task is waiting on.
+- Share a demo is right on Home.
+
 ## v0.4.27, November 20, 2026
 - Fixed: gryCE couldn't load anyone's profile after the Mix queue release, because members weren't allowed to read the new Mix Queue checkbox. gryCE now loads without it if that happens.
 
