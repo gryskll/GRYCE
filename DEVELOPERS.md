@@ -10,7 +10,7 @@ You don't need an account, keys or crew data for any of this. Reviewers don't ge
 
 1. **Clone it.** `git clone https://github.com/gryskll/gryce`
 2. **Click through the site with made-up data.** From the repo root run `python3 -m http.server 8000` and open `http://localhost:8000/dev/preview.html`. The bar in the corner switches who you are: member, Leadership, ISRC Admin, Support, or mid View as. `dev/demo.js` stands in for Supabase, and the real `docs/app.js` runs on top of it. Sign-in and saving don't do anything there.
-3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 58 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
+3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 66 checks: who sees what, member updates, ISRC numbering, View as, demos and the feedback rewards. Migrations run in version order (`sort -V`), so v4-11 comes after v4-9. The same tests run on every pull request.
 4. **Read in this order:** this file, `supabase/migrations/v4-6-view-as.sql` (the access model in one place), `scripts/sync-notion.mjs`, then `docs/app.js`.
 
 ### Where we'd like eyes
@@ -25,7 +25,7 @@ Open an issue or a pull request. Keep crew names, emails and amounts out of both
 ## The shape of it
 
 ```
-Notion (the records)  --->  GitHub Action, every 30 min  --->  Supabase (a copy, plus sign-in)  --->  the site (Cloudflare Pages)
+Notion (the records)  --->  GitHub Action, every 10 min  --->  Supabase (a copy, plus sign-in)  --->  the site (Cloudflare Pages)
         ^                       scripts/sync-notion.mjs                                                   docs/
         |                                                                                                   |
         +---------------- member updates, acknowledgements, ISRC codes go back the other way <-------------+
@@ -56,7 +56,7 @@ Notion database → Supabase table. The sync finds each Notion database by its I
 | Music Projects (all) | `project_index` | Everyone, except Leadership Only projects |
 | Document Number Registry | `documents` | Leadership only |
 | (none, made in gryCE) | `member_updates`, `announcement_acks`, `isrc_codes`, `song_updates`, `view_as_sessions` | Written by the site, see below |
-| Demos (made in gryCE first) | `demos`, `demo_reactions` | Everyone sees demos and counts. Comments: the demo's owner and Leadership. The sync creates the Notion page and reads Status, Hidden and Song back. A demo set to Picked up with no Song linked becomes a new Songs page (Idea/Concept, In Progress, credited by the Role the member chose) |
+| Demos (made in gryCE first) | `demos`, `demo_reactions` | Everyone sees demos and counts. Written feedback (reaction, tags, text up to 1,000 characters, the helpful mark): the demo's owner and Leadership, through `demo_comments()`. Feedback goes to Notion as a comment; the helpful mark stays in Supabase. The sync creates the Notion page and reads Status, Hidden and Song back. A demo set to Picked up with no Song linked becomes a new Songs page (Idea/Concept, In Progress, credited by the Role the member chose) |
 
 Every table and the three functions carry a comment explaining what they are (`supabase/migrations/v4-5-comments.sql`). In Supabase, open Table Editor and the comment shows under the table name.
 
@@ -113,12 +113,17 @@ Newer tables and columns are optional: if one is missing, the sync logs "Skipped
 ## The site
 
 - `docs/index.html`: the shell. Loads `config.js` (public URL and key), `version.js`, then `app.js`.
-- `docs/app.js`: everything else, about 1,200 lines. Sections are marked with `// Name ----` comments.
+- `docs/config.js`: the four public settings: Supabase URL and publishable key, `GOOGLE_CLIENT_ID` (Drive upload) and `GOOGLE_API_KEY` (Drive link check and playback). All four are public by design. Leave a Google value empty to turn its feature off.
+- `docs/app.js`: everything else, about 1,950 lines. Sections are marked with `// Name ----` comments.
   - `el(tag, attrs, ...children)` builds DOM. Falsy children are skipped and arrays are flattened one level, so `cond && el(...)` is the usual pattern. Nested arrays two levels deep print as text. This has caused bugs twice, so spread or `.flat()` them.
   - `refresh()` loads everything once after sign-in into `current`. `draw()` renders the view for `location.hash`.
-  - Routes: `#mix`, `#support`, `#owe`, `#news`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
+  - Routes: `#mix`, `#support`, `#owe`, `#news`, `#demos`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
   - Building blocks: `panel()` (a card), `group(tone, title, right, ...body)` (a colored box inside a card), `tile()` (Home and section cards), `jumpCards()` (cards that scroll to a group).
-  - Drive upload (Share a demo): Google Identity Services asks for `drive.file` only when someone taps Upload, then a resumable upload goes straight from the browser to the member's Drive, into a GRYSKLL demos (gryCE) folder, shared anyone-with-link. Hidden unless `GOOGLE_CLIENT_ID` is set in `docs/config.js`.
+  - Demos (`#demos`, its own section, not Crew news). Google Drive only for now:
+    - **Upload** (Share a demo): two taps, because browsers block popups that don't come straight from a tap. The first asks Google for `drive.file` (gryCE sees only files it creates). The second picks the file, and a resumable upload goes straight from the browser to a GRYSKLL demos (gryCE) folder in the member's Drive, with a progress bar, shared anyone-with-link. Hidden unless `GOOGLE_CLIENT_ID` is set.
+    - **Link check**: a pasted link must be a Drive file (`driveFileId()`). `checkDriveLink()` asks the Drive API with `GOOGLE_API_KEY`; a 404 means the crew can't open it, so the member is told to set Anyone with the link. A 403 is a key problem (wrong site or API restriction) and is let through rather than blaming the member. Uploaded files skip the check.
+    - **Playback**: `demoPlayer()` streams `files/ID?alt=media&key=...` into an `<audio>` element and plays it in the same tap. Drive's preview iframe is only the fallback, since it can't be started from outside and needs a second tap.
+    - **Feedback and rewards**: `feedbackBox()` on demos you didn't share (reaction, tags, text). On your own demo, each piece of feedback has a This helped button (`mark_feedback_helpful()`). That mark drives the thank-you card on Home (`thanksNotices()`), badges (`EAR_BADGES`, `badgeChip()`) and the Crew Ears panel (`crewEarsPanel()`), which shows last month's top five and this month's leaders, computed live, not posted as news.
   - Links: never print a raw URL. Use `linkButton(url, label?)` for a link field and `richText(tag, attrs, text)` for free text from Notion, which turns any URL in it into a button. `linkLabel()` names the button from the address.
   - Tones are green (done, money in), amber (waiting on you), orange (wants input), blue (tasks, songs, drafts), red (owed or holding things up) and gray. Use them the same way everywhere.
 - `docs/help-full.js`: the member guide inside gryCE. Update it in the same release as any change members will see.
@@ -130,6 +135,15 @@ Newer tables and columns are optional: if one is missing, the sync logs "Skipped
 Use `dev/preview.html` (see Kicking the tires). When a release adds a table, column or function the site reads, add made-up rows for it to `dev/demo.js` in the same release so the preview keeps working. Everything in `dev/` is invented: never put real crew data there. Check screens at 390px wide, since most of the crew is on a phone.
 
 `docs/app.js` uses the demo only when `window.gryceDemo` is set, which only `dev/preview.html` does. `dev/` isn't under `docs/`, so the live site never serves it.
+
+### Google Cloud settings
+
+All in the Google Cloud project behind gryCE's Google sign-in:
+
+- **Google Drive API**: enabled.
+- **OAuth consent screen, Data access**: `.../auth/drive.file` added. Publishing status must be In production, or only listed test users can upload.
+- **OAuth client** (the one Supabase signs in with): `https://gryce.gryskll.com` in Authorized JavaScript origins. Its Client ID is `GOOGLE_CLIENT_ID`. Its secret lives only in Supabase.
+- **API key "gryCE Drive link check"**: Application restriction Websites `https://gryce.gryskll.com/*`, API restriction Google Drive API only. It is `GOOGLE_API_KEY`. It only reads files that are already public. To test on a Cloudflare preview link, add `https://*.pages.dev/*` to both the key and the origins.
 
 ## Shipping a change
 
@@ -164,6 +178,9 @@ Known debt, roughly in order of payoff:
 7. **Old names:** `takes`, `projectsView` (now the active project card), "Project updates" comments, the `.take-*` CSS classes used for every list row. Rename when touching nearby code.
 8. **`optional()` swallows errors** so the sync stays green. Good for setup, but real failures only show as a "Skipped" line. Consider a summary that flags skips that weren't expected.
 9. **Group efforts don't close themselves.** When every linked deliverable is in, someone still marks the task Done in Notion.
+10. **Demos are Drive only.** Boombox (or other hosts) would need their own link check and player. Video demos play their audio only in the `<audio>` player.
+11. **Crew Ears shout-out isn't a news post.** It's a live panel on #demos. If the crew wants it as a real announcement, the sync could post one to Announcements on the 1st.
+12. **Feedback edits post a new Notion comment** each time; the old one stays. Fine for a log, noisy if people edit a lot.
 
 ## Glossary
 
@@ -173,3 +190,6 @@ Known debt, roughly in order of payoff:
 - **Show in gryCE:** a Music Projects checkbox. Gives a project its full card: outstanding, songs, funding.
 - **Crewmunity:** supporters outside the crew. Their contributions aren't repaid.
 - **Supporter:** a non-artist who contributed. Lives on the GRYSCO Leadership page.
+- **Demo:** new music a member shares for crew consideration, on Google Drive. Can become a song when Leadership sets it to Picked up in Notion.
+- **This helped:** the sharer's mark on a piece of demo feedback. The only thing that counts for rewards.
+- **Crew Ear:** a member whose feedback was marked helpful. Badges: Crew Ear (1), Sharp Ear (3), Golden Ear (10), Legendary Ear (25). Crew Ears is also the monthly shout-out panel on #demos.

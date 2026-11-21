@@ -2,7 +2,7 @@
 
 New to the code? Read `DEVELOPERS.md` for how it all fits together, how to ship a change, and the cleanup list.
 
-GRYSKLL Creative Engine. A member portal: crew members sign in with Google and see crew news, the deliverables and tasks they owe, where project funding stands, what's in the works, and their GRYSKLL discography. Members can mark their own deliverables submitted and their own tasks done, add a note, and acknowledge announcements.
+GRYSKLL Creative Engine. A member portal: crew members sign in with Google and see crew news, the deliverables and tasks they owe, demos from the crew (with feedback and Crew Ear rewards), where project funding stands, what's in the works, and their GRYSKLL discography. Members can mark their own deliverables submitted and their own tasks done, add a note, and acknowledge announcements.
 
 ## How it fits together
 
@@ -12,6 +12,7 @@ GRYSKLL Creative Engine. A member portal: crew members sign in with Google and s
 - **Notion stays a one-member Free workspace.** A second member turns on Notion's 1,000-block cap, which this workspace is far past. Crew get in through gryCE only.
 - **Everything runs on free plans.** The repo is public, so nothing with crew data (legal names, IPI numbers, emails, exports, logs) ever goes in it.
 - **Supabase** holds the copy, handles Google sign-in, and uses row level security so each member only sees their own rows.
+- **Google Drive** holds demo files in each member's own Drive. The site uploads, checks and plays them with Google's APIs, never through a gryCE server.
 - **Cloudflare Pages** serves the site from `docs/` at gryce.gryskll.com, deploying `main` on every merge. DNS for gryskll.com is at Squarespace, with a `gryce` CNAME pointing at the Pages project.
 
 ## Version
@@ -41,7 +42,7 @@ Members never edit synced tables. Updates go into `member_updates` (insert only,
    - `SUPABASE_URL`: Supabase project URL
    - `SUPABASE_SECRET_KEY`: Supabase secret key
    - `NOTION_WRITE_TOKEN`: gryCE Write connection token (optional; without it, member updates wait)
-3. Put the project URL and publishable key in `docs/config.js`. Both are public by design.
+3. Put the project URL and publishable key in `docs/config.js`, plus `GOOGLE_CLIENT_ID` and `GOOGLE_API_KEY` for demos (see DEVELOPERS.md, Google Cloud settings). All four are public by design.
 4. Cloudflare: Workers & Pages → Create application → Continue to Pages → Import an existing Git repository. Production branch `main`, no build command, output directory `docs`. Add the custom domain, then point a CNAME at the Pages address in DNS. Add the site's address to Supabase → Authentication → URL Configuration (Site URL and Redirect URLs).
 
 ## Files

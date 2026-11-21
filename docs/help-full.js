@@ -5,7 +5,7 @@ const HELP = `
 <p class="muted help-intro">gryCE, the GRYSKLL Creative Engine, is the crew's member portal. Here's how each part works.</p>
 <section class="card">
       <h2>Home</h2>
-      <p>Home is six tiles. Tap one to open it. Your phone's back button, or <strong>‹ All sections</strong>, brings you back. The <strong>How gryCE works</strong> button at the top of Home opens this guide.</p>
+      <p>Home is seven tiles, with the green <strong>Share a demo</strong> card above them. Tap one to open it. Your phone's back button, or <strong>‹ All sections</strong>, brings you back. The <strong>How gryCE works</strong> button at the top of Home opens this guide.</p>
       <ul>
         <li><strong>What you owe:</strong> everything waiting on you.</li>
         <li><strong>Crew news:</strong> announcements for the crew.</li>
@@ -87,10 +87,32 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Demos</h2>
-      <p>Got something new? Tap the green <strong>Share a demo</strong> card on Home or in Demos. Give it a title, then tap <strong>Upload from your device</strong> or paste a Google Drive link to the track, and add a line about what to listen for, and choose how you'd be credited if it becomes a GRYSKLL song: the beat or track, vocals, or both. Uploads go into a GRYSKLL demos (gryCE) folder in your own Google Drive. The first time, the button connects Google Drive: Google opens a small window asking you to let gryCE save files there (if your browser blocks it, allow popups for gryce.gryskll.com). Then tap <strong>Choose a file to upload</strong> and watch the progress bar. gryCE can only see the files it uploads, never the rest of your Drive. If you paste a Drive link instead, set its sharing to Anyone with the link first. gryCE checks, and tells you if the crew can’t open it. For now demos have to be on Google Drive. The whole crew sees it right away. Demos on Google Drive play right in gryCE: tap <strong>Play</strong> under the demo.</p>
-      <p><strong>Giving feedback.</strong> People share demos hoping for real ears, so every demo you didn't share has a feedback box. Pick how it hits you, tag what you're talking about, and say what hit and what you'd change. Only the person who shared it and Leadership read your words; everyone sees the counts. You can edit your feedback any time.</p>
-      <p><strong>Crew Ears.</strong> On your own demo, tap <strong>This helped</strong> on feedback that was useful. The giver gets a thank-you on Home and it counts toward their badge: 👂 Crew Ear (1 helpful), 🎧 Sharp Ear (3), 🥇 Golden Ear (10), 🏆 Legendary Ear (25). Demos shows last month's Crew Ears and this month's leaders.</p>
-      <p>On someone else's demo, tap <strong>Feeling it</strong>, <strong>Want on it</strong> or <strong>Not for me</strong>, and add a comment if you want. Everyone sees the counts. Only the person who shared it and the Leadership Team see your comment. Leadership marks demos Maybe, Picked up or Passed as the crew decides. A demo that's Picked up becomes a GRYSKLL song: it starts at Idea/Concept, credits you the way you chose, and the demo says what song it became.</p>
+      <p>Demos is where the crew shares new music for crew consideration. It has its own tile on Home, apart from Crew news. The tile counts demos you haven't given feedback on yet.</p>
+      <h3>Share a demo</h3>
+      <p>Tap the green <strong>Share a demo</strong> card on Home or in Demos. Give it a title, add the track, add a line about what you want the crew to listen for, and choose how you'd be credited if it becomes a GRYSKLL song: the beat or track, vocals, or both. Then tap <strong>Share with the crew</strong>. The whole crew sees it right away. For now demos have to be on Google Drive.</p>
+      <ul>
+        <li><strong>Upload from your device:</strong> the first time, this connects Google Drive. Google opens a small window asking you to let gryCE save files to your Drive. If nothing opens, your browser blocked it: allow popups for gryce.gryskll.com (look for the blocked-popup icon in the address bar) and tap again. Then tap <strong>Choose a file to upload</strong> and watch the progress bar. The file goes into a <strong>GRYSKLL demos (gryCE)</strong> folder in your own Drive, shared so anyone with the link can listen. gryCE can only see files it uploads, never the rest of your Drive. You stay connected for about an hour.</li>
+        <li><strong>Paste a Google Drive link:</strong> in Drive, open the file, tap <strong>Share</strong>, set General access to <strong>Anyone with the link</strong> (Viewer), and copy the link. gryCE checks it before sharing and tells you if the crew can't open it yet, or if it's a folder or not an audio or video file.</li>
+      </ul>
+      <h3>Listen</h3>
+      <p>Tap <strong>Play</strong> once under a demo and it plays right in gryCE, with pause and a scrub bar. Playing one demo pauses any other. <strong>Close player</strong> puts it away.</p>
+      <h3>Give feedback</h3>
+      <p>People share demos hoping for real ears, and feedback keeps the crew going. Every demo you didn't share has a green feedback box:</p>
+      <ul>
+        <li><strong>How does it hit you?</strong> Feeling it, Want on it, or Not for me.</li>
+        <li><strong>What are you talking about?</strong> Optional tags: Hook, Bass, Drums, Vocals, Mix, Arrangement, Vibe.</li>
+        <li><strong>Your feedback:</strong> what hit and what you'd change. Honest and specific helps most.</li>
+      </ul>
+      <p>Tap <strong>Send feedback</strong>. You can edit it any time. Everyone sees the counts. Only the person who shared the demo and the Leadership Team read your words.</p>
+      <h3>Crew Ears: rewards for feedback</h3>
+      <p>On your own demo, <strong>Feedback from the crew</strong> shows what people said. Tap <strong>🙏 This helped</strong> on feedback that was useful. That's the only thing that counts for rewards, so tap it whenever feedback helps:</p>
+      <ul>
+        <li>The person who gave it gets a <strong>Your feedback helped</strong> card on Home.</li>
+        <li>It counts toward their badge, shown next to their name: 👂 Crew Ear (1 helpful), 🎧 Sharp Ear (3), 🥇 Golden Ear (10), 🏆 Legendary Ear (25).</li>
+        <li><strong>Crew Ears</strong>, at the bottom of Demos, shouts out last month's top five and shows this month's leaders.</li>
+      </ul>
+      <h3>When a demo becomes a song</h3>
+      <p>Leadership marks demos Maybe, Picked up or Passed as the crew decides. A demo that's Picked up becomes a GRYSKLL song: it starts at Idea/Concept, credits you the way you chose, and the demo says what song it became.</p>
     </section>
 <section class="card">
       <h2>Mix queue</h2>

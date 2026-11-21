@@ -131,3 +131,26 @@ The upload button stays hidden until `GOOGLE_CLIENT_ID` is set in `docs/config.j
 2. APIs & Services > OAuth consent screen > Data access (or Scopes): add `https://www.googleapis.com/auth/drive.file`. It lets gryCE see only files it creates.
 3. APIs & Services > Credentials > the OAuth client gryCE signs in with: under Authorized JavaScript origins add `https://gryce.gryskll.com` (and the pages.dev address for testing). Save.
 4. Copy that client's **Client ID** (it ends in `.apps.googleusercontent.com`) into `GOOGLE_CLIENT_ID`. It's public. Never copy the client secret.
+
+## v0.4.31 to v0.4.32: Drive upload turned on, popup fix
+
+`GOOGLE_CLIENT_ID` is set. Upload now asks Google's permission straight from the tap (step 1), then picks the file (step 2), so popup blockers allow it. If a member's browser still blocks the window, they allow popups for gryce.gryskll.com. The OAuth consent screen must be In production, or only test users can upload.
+
+## v0.4.33 to v0.4.35: Drive-only demos, link check
+
+Demos accept Google Drive links only. A pasted link is checked with `GOOGLE_API_KEY` before sharing. Set up once in the same Google Cloud project:
+
+1. APIs & Services > Credentials > Create credentials > API key. Name it `gryCE Drive link check`. Leave "Authenticate API calls through a service account" unticked.
+2. Application restrictions: Websites, `https://gryce.gryskll.com/*`.
+3. API restrictions: Restrict key, Google Drive API only.
+4. Copy the key (starts with `AIza`) into `GOOGLE_API_KEY` in `docs/config.js`. It's public by design.
+
+Key changes can take about 5 minutes to reach Google. If private links get through, the website restriction is probably wrong.
+
+## v0.4.36: feedback first, Crew Ear rewards
+
+Run `supabase/migrations/v4-11-feedback.sql` (applied November 20, 2026). It adds tags, the helpful mark and the thank-you seen time to `demo_reactions`, raises feedback to 1,000 characters, and adds `mark_feedback_helpful()`, `my_feedback_thanks()`, `seen_feedback_thanks()` and `crew_ears()`. No sync change is needed beyond the next run, which adds tags to the Notion comment.
+
+## v0.4.37 to v0.4.39: Demos section, one-tap play, Help
+
+Demos has its own tile and page (`#demos`), apart from Crew news. Play streams the file from the Drive API with `GOOGLE_API_KEY`, so it starts on the first tap. No setup.
