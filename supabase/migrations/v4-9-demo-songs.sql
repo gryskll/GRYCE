@@ -2,7 +2,11 @@
 -- The member picks how they'd be credited when they share a demo. When Leadership
 -- sets the demo to Picked up in Notion, the sync creates the song in Songs
 -- (Idea/Concept, credited by that role), links it to the demo, and gryCE shows it.
+-- Also fixes v0.4.24: members need to read their own Mix Queue checkbox. Without
+-- this grant the profile query fails with "permission denied for table artists".
 -- Run in Supabase: SQL Editor > New query > paste > Run. Safe to re-run.
+
+grant select (mix_queue) on public.artists to authenticated;
 
 alter table public.demos add column if not exists credit_role text;
 alter table public.demos drop constraint if exists demos_credit_role;
