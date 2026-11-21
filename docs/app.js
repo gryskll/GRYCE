@@ -228,7 +228,7 @@ function updateForm(kind, id, newStatus, { askLink }) {
 
 // Layout ------------------------------------------------------------------
 // Home is a grid of square tiles. A tile opens its section full screen, and the
-// section's address (#owe, #news, ...) means the phone's back button works.
+// section's address (#owe, #news, #demos, ...) means the phone's back button works.
 
 function panel(title, badge, ...body) {
   return el('section', { class: 'card' },
@@ -425,13 +425,19 @@ function oweView(d) {
 }
 
 // Demos ---------------------------------------------------------------------
-// Members share a demo (a Google Drive link) for crew consideration.
-// It shows here for everyone. The crew reacts; a comment goes only to the
-// person who shared it and Leadership, and to Notion.
+// Members share a demo for crew consideration on the Demos page (#demos), its
+// own section apart from Crew news. Demos are Google Drive only for now: upload
+// from the device, or paste a Drive link that's open to anyone with the link.
+// Everyone sees each demo and its reaction counts. Written feedback (reaction,
+// tags, text) goes only to the person who shared it, Leadership, and Notion.
+// The sharer can mark feedback "This helped"; that one mark feeds every reward:
+// the giver's thank-you on Home, Crew Ear badges, and the Crew Ears shout-out.
+// Database side: supabase/migrations/v4-8, v4-9 and v4-11.
 
 const REACTIONS = [['feeling', 'Feeling it'], ['want_on', 'Want on it'], ['not_for_me', 'Not for me']];
 const FEEDBACK_TAGS = ['Hook', 'Bass', 'Drums', 'Vocals', 'Mix', 'Arrangement', 'Vibe'];
-// Crew Ear badges, earned by feedback the sharer marked "This helped".
+// Crew Ear badges, earned by feedback the sharer marked "This helped". Counts come
+// from crew_ears(). Highest threshold first; change the numbers here only.
 const EAR_BADGES = [[25, 'Legendary Ear', '🏆'], [10, 'Golden Ear', '🥇'], [3, 'Sharp Ear', '🎧'], [1, 'Crew Ear', '👂']];
 const earBadge = (helpful) => EAR_BADGES.find(([n]) => helpful >= n) ?? null;
 const earsOf = (d, artistId) => (d.crewEars ?? []).find((x) => x.artist_id === artistId);
@@ -443,10 +449,14 @@ const DEMO_ROLES = [['Producer', 'the beat or track (Producer)'], ['Vocals', 'vo
 const DEMO_STATUS_TONE = { Maybe: 'doc-needs-input', 'Picked up': 'status-accepted', Passed: '' };
 
 // Upload to the member's own Google Drive ----------------------------------
-// Asks Google for permission only when someone taps Upload (drive.file: gryCE
-// can see only files it creates). The file goes into a "GRYSKLL demos (gryCE)"
-// folder in their Drive, is shared as anyone-with-the-link can view, and its
-// link fills in the form. Nothing passes through gryCE's own servers.
+// Two taps, because browsers block popups that don't come straight from a tap:
+// 1. "Upload from your device" opens Google's permission window (drive.file
+//    scope: gryCE can see only files it creates). Needs GOOGLE_CLIENT_ID.
+// 2. "Choose a file to upload" picks the file. A resumable upload sends it
+//    straight from the browser to a "GRYSKLL demos (gryCE)" folder in their
+//    Drive with a progress bar, shares it anyone-with-the-link can view, and
+//    fills in the link. Nothing passes through gryCE's own servers.
+// The permission lasts about an hour, so step 1 is skipped until it expires.
 const DRIVE_FOLDER = 'GRYSKLL demos (gryCE)';
 let gisLoading = null;
 function loadGis() {
@@ -725,7 +735,8 @@ async function checkDriveLink(url) {
   return null;
 }
 
-// Google Drive links play right in gryCE through Drive's own preview player.
+// The Drive file ID from any Drive link shape (/file/d/ID/..., ?id=ID), or null
+// when the link isn't a Google Drive file. Demos accept only links this can read.
 function driveFileId(url) {
   try {
     const u = new URL(url);
@@ -733,9 +744,10 @@ function driveFileId(url) {
     return u.pathname.match(/\/file\/d\/([\w-]{10,})/)?.[1] ?? u.searchParams.get('id');
   } catch { return null; }
 }
-// One tap plays: gryCE's own audio player streams the file from Google Drive
-// (public files only, through the restricted API key). If that fails, it falls
-// back to Drive's preview player, which needs its own tap.
+// One tap plays: gryCE's own <audio> player streams the file from the Drive API
+// (alt=media with GOOGLE_API_KEY, so public files only) and starts in the same
+// tap. Drive's preview iframe can't be started from outside, which is why it's
+// only the fallback when the stream fails (and it needs its own tap).
 let playingAudio = null;
 function demoPlayer(dm) {
   const id = driveFileId(dm.link);
@@ -762,6 +774,9 @@ function demoPlayer(dm) {
   return [btn, slot];
 }
 
+// One demo: player, the sharer's note, the crew's counts, then either your
+// feedback box (someone else's demo) or the feedback list with This helped
+// buttons (your demo). Leadership also sees the feedback list, without buttons.
 function demoRow(dm, d) {
   const mineDemo = dm.artist_id === me.id;
   const mine = (d.demoReactions ?? []).find((r) => r.demo_id === dm.id && r.artist_id === me.id);
@@ -806,7 +821,8 @@ function demosOf(d) {
   return (d.demos ?? []).map((dm) => ({ ...dm, ...(summary.get(dm.id) ?? {}), id: dm.id }))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
-// Demos from others shared in the last 30 days that you haven't reacted to yet.
+// Demos from others shared in the last 30 days that you haven't given feedback
+// on yet. Drives the Demos tile count on Home and the "New to you" group.
 function demosToHear(d) {
   const reacted = new Set((d.demoReactions ?? []).filter((r) => r.artist_id === me.id).map((r) => r.demo_id));
   const since = Date.now() - 30 * 864e5;

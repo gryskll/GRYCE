@@ -404,8 +404,11 @@ async function pushDemos() {
   return sent;
 }
 
-// Reactions become comments on the demo's Notion page, and the Reactions field
-// shows the running counts.
+// Demo feedback becomes a comment on the demo's Notion page: who, their
+// reaction, the tags ("About: Hook, Bass") and the text ("Feedback: ...").
+// Editing feedback in gryCE resets pushed_at, so the new version is posted as a
+// new comment. The Reactions field shows the running counts. The "This helped"
+// mark stays in Supabase only; it's a gryCE reward, not a Notion record.
 async function pushDemoReactions() {
   if (!NOTION_WRITE_TOKEN) return 0;
   const pending = await sb('demo_reactions?pushed_at=is.null&select=demo_id,artist_id,reaction,comment,tags,updated_at,demos(notion_page_id)');

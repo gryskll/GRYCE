@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.39, November 20, 2026
+- Help: the Demos guide is rewritten step by step: sharing, uploading, pasting a link, listening, giving feedback, and Crew Ears.
+
 ## v0.4.38, November 20, 2026
 - One tap plays a demo. gryCE has its own player now, so you no longer tap Play twice. Playing one demo pauses any other.
 
