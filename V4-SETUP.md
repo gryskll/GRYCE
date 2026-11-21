@@ -112,3 +112,9 @@ Notion is done: Artists has a Mix Queue checkbox, ticked for Qthulhu and Dragon'
 3. Run the sync by hand. The log line lists Mix queue edits, new demos and reactions when there are any.
 
 Test: in the Mix queue, Edit a song and change only the mixer. The row says the change is on its way, and the next sync writes it to Notion with a comment. In Crew news, Share a demo with any https link, then react to it from another member's account.
+
+## v0.4.26: demos that become songs
+
+Notion is done: Demos has a Role select and a Song relation. Run `supabase/migrations/v4-9-demo-songs.sql` in the SQL Editor.
+
+To make a demo a song: set its Status to Picked up in the Demos database. On the next sync, gryCE Write creates the song in Songs (Idea/Concept, In Progress, Song Link set to the demo, the person who shared it credited by their Role) and links it in the demo's Song field. To use an existing song instead, link it in Song before setting Picked up.

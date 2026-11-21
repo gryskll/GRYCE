@@ -211,3 +211,18 @@ set role authenticated;
 select pg_temp.login('three@test');
 select pg_temp.check('other members cannot read someone else''s comment', (select count(*) from public.demo_reactions) = 0 and (select count(*) from public.demo_comments()) = 0);
 select pg_temp.check('demos show who shared them', (select artist_name from public.demo_summary()) = 'Member One');
+
+-- Demos that become songs: the member picks a credit role; the song name comes back with the demo.
+select pg_temp.login('one@test');
+insert into public.demos (title, link, credit_role) values ('Demo Two', 'https://example.com/d2', 'Vocals');
+select pg_temp.check('a member can choose how they would be credited', (select credit_role from public.demos where title = 'Demo Two') = 'Vocals');
+do $$ begin
+  insert into public.demos (title, link, credit_role) values ('Demo Three', 'https://example.com/d3', 'Boss');
+  raise exception 'FAILED: an unknown credit role was accepted';
+exception when check_violation then raise notice 'ok  only Producer, Vocals or both can be chosen';
+end $$;
+reset role;
+update public.demos set song_id = '00000000-0000-0000-0000-0000000000b2' where title = 'Demo Two';
+set role authenticated;
+select pg_temp.login('two@test');
+select pg_temp.check('the crew sees what song a demo became', (select song_name from public.demo_summary() s join public.demos d on d.id = s.demo_id where d.title = 'Demo Two') = 'Song Two');
