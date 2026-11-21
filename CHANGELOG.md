@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.30, November 20, 2026
+- Share a demo is a big green card on Home and in Crew news.
+- Upload from your device: the track goes into a "GRYSKLL demos (gryCE)" folder in your own Google Drive and its link fills in for you. Turns on once Google Drive access is set up for gryCE.
+
 ## v0.4.29, November 20, 2026
 - Your own tasks now show their notes from Notion. Crew tasks still show only their gryCE Note.
 

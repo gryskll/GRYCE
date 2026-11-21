@@ -122,3 +122,12 @@ To make a demo a song: set its Status to Picked up in the Demos database. On the
 ## v0.4.28: task context
 
 Run `supabase/migrations/v4-10-task-context.sql` in the SQL Editor, then run the sync. Until then tasks still sync, just without Project, Priority and Waiting on.
+
+## v0.4.30: upload demos to Google Drive
+
+The upload button stays hidden until `GOOGLE_CLIENT_ID` is set in `docs/config.js`. Set up once, in the Google Cloud project behind gryCE's Google sign-in:
+
+1. APIs & Services > Library: enable **Google Drive API**.
+2. APIs & Services > OAuth consent screen > Data access (or Scopes): add `https://www.googleapis.com/auth/drive.file`. It lets gryCE see only files it creates.
+3. APIs & Services > Credentials > the OAuth client gryCE signs in with: under Authorized JavaScript origins add `https://gryce.gryskll.com` (and the pages.dev address for testing). Save.
+4. Copy that client's **Client ID** (it ends in `.apps.googleusercontent.com`) into `GOOGLE_CLIENT_ID`. It's public. Never copy the client secret.
