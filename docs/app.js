@@ -6,7 +6,7 @@
 // See DEVELOPERS.md for the map, and dev/preview.html to run it with made-up data.
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, GOOGLE_CLIENT_ID } from './config.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, GOOGLE_CLIENT_ID, GOOGLE_API_KEY } from './config.js';
 import { helpView } from './help-full.js';
 
 const app = document.getElementById('app');
@@ -425,7 +425,7 @@ function oweView(d) {
 }
 
 // Demos ---------------------------------------------------------------------
-// Members share a demo (a Boombox or Google Drive link) for crew consideration.
+// Members share a demo (a Google Drive link) for crew consideration.
 // It shows here for everyone. The crew reacts; a comment goes only to the
 // person who shared it and Leadership, and to Notion.
 
@@ -537,7 +537,7 @@ function shareDemoCard() {
       el('span', { class: 'share-card-go', 'aria-hidden': 'true' }, '+')));
   function open() {
     const title = el('input', { type: 'text', maxlength: '120', placeholder: 'Song title', required: true });
-    const link = el('input', { type: 'url', maxlength: '500', placeholder: 'Boombox or Google Drive link (https://…)' });
+    const link = el('input', { type: 'url', maxlength: '500', placeholder: 'Google Drive link (https://drive.google.com/…)' });
     const note = el('textarea', { rows: '3', maxlength: '1000', placeholder: 'What should the crew listen for? (optional)' });
     const role = el('select', { required: true },
       el('option', { value: '' }, 'Choose one'),
@@ -553,6 +553,7 @@ function shareDemoCard() {
     const bar = el('progress', { class: 'upload-bar', max: '100', value: '0', hidden: true });
     const picker = el('input', { type: 'file', accept: 'audio/*,video/*,.wav,.mp3,.m4a,.aif,.aiff,.flac', hidden: true });
     let upBtn = null;
+    let uploadedLink = null;
     const popupTip = el('p', { class: 'small muted popup-tip' },
       'Heads up: Google opens a small window to ask permission the first time. If your browser blocks popups, allow them for gryce.gryskll.com (look for the blocked-popup icon in the address bar), then tap Upload again.');
     const label = () => {
@@ -586,7 +587,7 @@ function shareDemoCard() {
           bar.value = Math.round(f * 100);
           status.textContent = `Uploading ${file.name} to your Google Drive… ${Math.round(f * 100)}%`;
         });
-        link.value = url;
+        link.value = url; uploadedLink = url;
         if (!title.value.trim()) title.value = file.name.replace(/\.[^.]+$/, '');
         bar.value = 100;
         status.textContent = `Uploaded to your Drive, in “${DRIVE_FOLDER}”. Anyone with the link can listen. Now tap Share with the crew.`;
@@ -605,9 +606,15 @@ function shareDemoCard() {
         const row = { title: title.value.trim(), link: link.value.trim(), note: note.value.trim() || null, credit_role: role.value || null };
         if (!row.title) return fail('Give it a title.');
         if (!row.link) return fail(GOOGLE_CLIENT_ID ? 'Upload the file or paste a link.' : 'Paste a link to the track.');
-        if (!/^https:\/\//i.test(row.link)) return fail('Links need to start with https://');
+        if (!driveFileId(row.link)) return fail('For now demos have to be on Google Drive. Upload the file, or paste a Google Drive link.');
         if (!row.credit_role) return fail('Pick how you’d be credited if it becomes a song.');
         send.disabled = true;
+        if (row.link !== uploadedLink) {
+          send.textContent = 'Checking the link…';
+          const problem = await checkDriveLink(row.link);
+          send.textContent = 'Share with the crew';
+          if (problem) { send.disabled = false; return fail(problem); }
+        }
         const { error } = await supabase.from('demos').insert(row);
         if (error) { send.disabled = false; return fail(`Couldn’t share that: ${error.message}`); }
         await refresh();
@@ -615,8 +622,8 @@ function shareDemoCard() {
     },
     el('h3', { class: 'share-form-title' }, 'Share a demo'),
     el('p', { class: 'small muted' }, GOOGLE_CLIENT_ID
-      ? 'Upload the track to your own Google Drive, or paste a Boombox or Drive link. The whole crew sees it in Crew news.'
-      : 'Paste a Boombox or Google Drive link. For a Drive file, set sharing to anyone with the link first. The whole crew sees it in Crew news.'),
+      ? 'Upload the track to your own Google Drive, or paste a Google Drive link. A pasted link has to be shared as “Anyone with the link”. The whole crew sees it in Crew news.'
+      : 'Paste a Google Drive link. Set its sharing to “Anyone with the link” first. The whole crew sees it in Crew news.'),
     title,
     upBtn && el('div', { class: 'row' }, upBtn, picker),
     upBtn && popupTip,
@@ -643,20 +650,44 @@ function reactionControls(dm, mine) {
       await refresh();
     };
     box.replaceChildren(...[
+      el('p', { class: 'react-label' }, picked ? 'Your take' : 'What do you think?'),
       el('div', { class: 'reactions' }, REACTIONS.map(([k, label]) =>
         el('button', { class: `reaction${picked === k ? ' on' : ''}`, type: 'button', 'aria-pressed': String(picked === k),
           onclick: () => (viewingAs() ? null : save(k, false)) },
         `${label} `, el('span', { class: 'reaction-count' }, String(dm[k] ?? 0))))),
-      picked && !commentOpen && !viewingAs() && el('button', { class: 'link', type: 'button', onclick: () => draw(picked, true) },
-        mine?.comment ? 'Edit your comment' : 'Add a comment'),
+      picked && !commentOpen && !viewingAs() && el('button', { class: 'ghost comment-btn', type: 'button', onclick: () => draw(picked, true) },
+        mine?.comment ? 'Edit your comment' : '💬 Add a comment'),
       commentOpen && el('div', { class: 'update-form' }, comment,
         el('div', { class: 'row' },
           el('button', { class: 'primary small', type: 'button', onclick: () => save(picked, true) }, 'Send'),
           el('button', { class: 'link', type: 'button', onclick: () => draw(picked, false) }, 'Cancel'))),
-      mine?.comment && !commentOpen && el('p', { class: 'small muted' }, `Your comment: ${mine.comment}`)].filter(Boolean));
+      mine?.comment && !commentOpen && el('p', { class: 'my-comment' }, el('strong', {}, 'Your comment: '), mine.comment)].filter(Boolean));
   };
   draw(mine?.reaction ?? null, false);
   return box;
+}
+
+// Can the crew open this Drive link? Asks Google's Drive API with gryCE's
+// public API key: a file only comes back if anyone with the link can see it.
+// Returns a message to show, or null when the link is fine (or can't be checked).
+async function checkDriveLink(url) {
+  const id = driveFileId(url);
+  if (!id) return 'That isn’t a Google Drive file link. Open the file in Drive, tap Share, then Copy link.';
+  if (!GOOGLE_API_KEY) return null;
+  let res;
+  try {
+    const key = new URL(url).searchParams.get('resourcekey');
+    res = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=mimeType&supportsAllDrives=true&key=${encodeURIComponent(GOOGLE_API_KEY)}`,
+      { headers: key ? { 'X-Goog-Drive-Resource-Keys': `${id}/${key}` } : {} });
+  } catch { return null; }
+  if (res.status === 404 || res.status === 403) {
+    return 'The crew can’t open that file yet. In Google Drive, open the file, tap Share, set General access to “Anyone with the link” (Viewer), then share it here again.';
+  }
+  if (!res.ok) return null;
+  const { mimeType = '' } = await res.json().catch(() => ({}));
+  if (mimeType === 'application/vnd.google-apps.folder') return 'That’s a folder. Share the link to the track itself.';
+  if (!/^(audio|video)\//.test(mimeType)) return 'That file doesn’t look like audio or video. Share the link to the track itself.';
+  return null;
 }
 
 // Google Drive links play right in gryCE through Drive's own preview player.
@@ -695,10 +726,13 @@ function demoRow(dm, d) {
       dm.hidden && el('span', { class: 'tag' }, 'Hidden')),
     el('div', { class: 'demo-play' }, demoPlayer(dm)),
     dm.song_name && el('p', { class: 'pending small' }, `Now a GRYSKLL song: ${dm.song_name}. It’s in the works at Idea/Concept.`),
-    richText('p', { class: 'ann-body' }, dm.note),
+    dm.note && richText('p', { class: 'demo-note' }, dm.note),
     mineDemo
-      ? el('p', { class: 'small muted' }, REACTIONS.map(([k, label]) => `${label} ${dm[k] ?? 0}`).join(' · '))
+      ? el('div', {}, el('p', { class: 'react-label' }, 'How the crew feels'),
+        el('div', { class: 'reactions' }, REACTIONS.map(([k, label]) =>
+          el('span', { class: `reaction static${(dm[k] ?? 0) > 0 ? ' on' : ''}` }, `${label} `, el('span', { class: 'reaction-count' }, String(dm[k] ?? 0))))))
       : reactionControls(dm, mine),
+    comments.length > 0 && el('p', { class: 'react-label' }, 'Comments'),
     comments.length > 0 && el('ul', { class: 'demo-comments' }, comments.map((c) =>
       el('li', {}, el('strong', {}, c.who), ` (${REACTIONS.find(([k]) => k === c.reaction)?.[1] ?? c.reaction}): ${c.comment}`))));
 }

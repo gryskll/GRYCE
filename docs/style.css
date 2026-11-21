@@ -387,3 +387,18 @@ body.viewing-as .update { display: none; }
 .demo-play { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .demo-player { width: 100%; }
 .demo-player iframe { width: 100%; aspect-ratio: 16 / 9; max-height: 360px; border: 0; border-radius: 12px; background: #000; }
+
+/* Demos: reactions, comments and notes big enough to notice */
+.react-label { margin: 16px 0 6px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.reactions { gap: 10px; margin: 0 0 8px; }
+.reaction { font-size: 16px; padding: 10px 18px; font-weight: 600; }
+.reaction:hover:not(.static) { border-color: var(--accent); }
+.reaction.static { cursor: default; }
+.reaction-count { margin-left: 4px; }
+.comment-btn { font-size: 15px; margin-top: 4px; }
+.my-comment { font-size: 16px; margin: 8px 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: rgba(255,255,255,0.04); border-radius: 0 10px 10px 0; }
+.demo-note { font-size: 17px; line-height: 1.5; margin: 12px 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: rgba(255,255,255,0.04); border-radius: 0 10px 10px 0; white-space: pre-wrap; }
+.demo-comments { font-size: 16px; color: var(--text); margin-top: 0; }
+.demo-comments li { padding: 10px 0; line-height: 1.45; }
+.demo-comments strong { color: var(--accent); }
+.play-btn { font-size: 16px; padding: 10px 20px; }
