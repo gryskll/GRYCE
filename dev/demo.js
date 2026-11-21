@@ -111,7 +111,18 @@ const rpcs = {
     { demo_id: 'dm1', artist_name: 'Another Artist', feeling: 3, want_on: 1, not_for_me: 0, comments: 1 },
     { demo_id: 'dm2', artist_name: me.name, feeling: 2, want_on: 2, not_for_me: 1, comments: 1, song_name: 'Slow Burn' },
   ],
-  demo_comments: () => [{ demo_id: 'dm2', who: 'Third Artist', reaction: 'want_on', comment: 'I hear a verse on the second half.', updated_at: new Date().toISOString() }],
+  demo_comments: () => [
+    { demo_id: 'dm2', artist_id: 'a3', who: 'Third Artist', reaction: 'want_on', comment: 'I hear a verse on the second half. The kick is fighting the bass around 1:10.', tags: ['Bass', 'Mix'], helpful: true, updated_at: new Date().toISOString() },
+    { demo_id: 'dm2', artist_id: 'a2', who: 'Another Artist', reaction: 'feeling', comment: 'That hook is stuck in my head.', tags: ['Hook'], helpful: false, updated_at: new Date().toISOString() },
+  ],
+  crew_ears: () => [
+    { artist_id: 'a3', name: 'Third Artist', feedback: 12, helpful: 11, helpful_this_month: 3, helpful_last_month: 5 },
+    { artist_id: 'a2', name: 'Another Artist', feedback: 6, helpful: 2, helpful_this_month: 1, helpful_last_month: 2 },
+    { artist_id: 'me', name: me.name, feedback: 4, helpful: 1, helpful_this_month: 0, helpful_last_month: 1 },
+  ],
+  my_feedback_thanks: () => [{ demo_id: 'dm1', title: 'Rooftop Sketch', sharer: 'Another Artist', helpful_at: new Date().toISOString() }],
+  seen_feedback_thanks: () => null,
+  mark_feedback_helpful: () => null,
   mix_people: () => [{ id: 'm1', name: 'Mix Engineer', mixes: true, masters: false }, { id: 'm2', name: 'Master Engineer', mixes: false, masters: true }, { id: 'me', name: me.name, mixes: true, masters: false }],
   support_status: () => [{
     is_support: me.support, viewing_id: as === 'viewing' ? 'me' : null, viewing_name: as === 'viewing' ? me.name : null,

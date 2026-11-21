@@ -430,6 +430,15 @@ function oweView(d) {
 // person who shared it and Leadership, and to Notion.
 
 const REACTIONS = [['feeling', 'Feeling it'], ['want_on', 'Want on it'], ['not_for_me', 'Not for me']];
+const FEEDBACK_TAGS = ['Hook', 'Bass', 'Drums', 'Vocals', 'Mix', 'Arrangement', 'Vibe'];
+// Crew Ear badges, earned by feedback the sharer marked "This helped".
+const EAR_BADGES = [[25, 'Legendary Ear', '🏆'], [10, 'Golden Ear', '🥇'], [3, 'Sharp Ear', '🎧'], [1, 'Crew Ear', '👂']];
+const earBadge = (helpful) => EAR_BADGES.find(([n]) => helpful >= n) ?? null;
+const earsOf = (d, artistId) => (d.crewEars ?? []).find((x) => x.artist_id === artistId);
+function badgeChip(d, artistId) {
+  const b = earBadge(earsOf(d, artistId)?.helpful ?? 0);
+  return b && el('span', { class: 'ear-badge', title: `${b[1]}: feedback marked helpful ${earsOf(d, artistId).helpful} times` }, `${b[2]} ${b[1]}`);
+}
 const DEMO_ROLES = [['Producer', 'the beat or track (Producer)'], ['Vocals', 'vocals'], ['Producer and vocals', 'the beat and vocals']];
 const DEMO_STATUS_TONE = { Maybe: 'doc-needs-input', 'Picked up': 'status-accepted', Passed: '' };
 
@@ -638,32 +647,56 @@ function shareDemoCard() {
   return box;
 }
 
-function reactionControls(dm, mine) {
-  const box = el('div', {});
-  const draw = (picked, commentOpen) => {
-    const comment = el('textarea', { rows: '2', maxlength: '280', placeholder: 'A line for whoever shared it (optional)' });
+// Feedback first: a big box on every demo you didn't share. Pick how it hits you,
+// tag what you're talking about, and say what hit and what you'd change.
+function feedbackBox(dm, mine) {
+  const box = el('div', { class: 'feedback-box' });
+  const who = dm.artist_name ?? 'A crew member';
+  const draw = (editing) => {
+    if (mine && !editing) {
+      box.replaceChildren(...[
+        el('p', { class: 'feedback-head' }, mine.helpful_at ? `🙏 ${who} said your feedback helped` : 'Your feedback is in. Thank you.'),
+        el('div', { class: 'reactions' },
+          el('span', { class: 'reaction static on' }, REACTIONS.find(([k]) => k === mine.reaction)?.[1] ?? mine.reaction),
+          (mine.tags ?? []).map((t) => el('span', { class: 'fb-tag on static' }, t))),
+        mine.comment && el('p', { class: 'my-comment' }, mine.comment),
+        !viewingAs() && el('button', { class: 'ghost comment-btn', type: 'button', onclick: () => draw(true) }, 'Edit your feedback')].filter(Boolean));
+      return;
+    }
+    let picked = mine?.reaction ?? null;
+    const tags = new Set(mine?.tags ?? []);
+    const comment = el('textarea', { rows: '4', maxlength: '1000', placeholder: 'What hit? What would you change? Be honest and specific, that’s what helps.' });
     if (mine?.comment) comment.value = mine.comment;
-    const save = async (reaction, withComment) => {
-      const row = { demo_id: dm.id, reaction, comment: withComment ? (comment.value.trim() || null) : (mine?.comment ?? null) };
+    const msg = el('p', { class: 'error small', hidden: true });
+    const reactRow = el('div', { class: 'reactions' });
+    const drawReacts = () => reactRow.replaceChildren(...REACTIONS.map(([k, label]) =>
+      el('button', { class: `reaction${picked === k ? ' on' : ''}`, type: 'button', 'aria-pressed': String(picked === k),
+        onclick: () => { picked = k; drawReacts(); } }, label)));
+    drawReacts();
+    const tagRow = el('div', { class: 'fb-tags' }, FEEDBACK_TAGS.map((t) => {
+      const b = el('button', { class: `fb-tag${tags.has(t) ? ' on' : ''}`, type: 'button', 'aria-pressed': String(tags.has(t)),
+        onclick: () => { tags.has(t) ? tags.delete(t) : tags.add(t); b.classList.toggle('on', tags.has(t)); b.setAttribute('aria-pressed', String(tags.has(t))); } }, t);
+      return b;
+    }));
+    const send = el('button', { class: 'primary', type: 'button', onclick: async () => {
+      if (viewingAs()) return;
+      if (!picked) { msg.textContent = 'Pick how it hits you first.'; msg.hidden = false; return; }
+      send.disabled = true;
+      const row = { demo_id: dm.id, reaction: picked, comment: comment.value.trim() || null, tags: [...tags] };
       const { error } = await supabase.from('demo_reactions').upsert(row, { onConflict: 'demo_id,artist_id' });
-      if (error) { box.append(el('p', { class: 'error small' }, `Couldn’t save that: ${error.message}`)); return; }
+      if (error) { send.disabled = false; msg.textContent = `Couldn’t save that: ${error.message}`; msg.hidden = false; return; }
       await refresh();
-    };
+    } }, mine ? 'Update feedback' : 'Send feedback');
     box.replaceChildren(...[
-      el('p', { class: 'react-label' }, picked ? 'Your take' : 'What do you think?'),
-      el('div', { class: 'reactions' }, REACTIONS.map(([k, label]) =>
-        el('button', { class: `reaction${picked === k ? ' on' : ''}`, type: 'button', 'aria-pressed': String(picked === k),
-          onclick: () => (viewingAs() ? null : save(k, false)) },
-        `${label} `, el('span', { class: 'reaction-count' }, String(dm[k] ?? 0))))),
-      picked && !commentOpen && !viewingAs() && el('button', { class: 'ghost comment-btn', type: 'button', onclick: () => draw(picked, true) },
-        mine?.comment ? 'Edit your comment' : '💬 Add a comment'),
-      commentOpen && el('div', { class: 'update-form' }, comment,
-        el('div', { class: 'row' },
-          el('button', { class: 'primary small', type: 'button', onclick: () => save(picked, true) }, 'Send'),
-          el('button', { class: 'link', type: 'button', onclick: () => draw(picked, false) }, 'Cancel'))),
-      mine?.comment && !commentOpen && el('p', { class: 'my-comment' }, el('strong', {}, 'Your comment: '), mine.comment)].filter(Boolean));
+      el('p', { class: 'feedback-head' }, 'Your feedback keeps the crew going'),
+      el('p', { class: 'feedback-sub' }, `${who} shared this hoping for real ears. When they mark your feedback helpful, you earn Crew Ear badges and a shot at the monthly shout-out.`),
+      el('p', { class: 'react-label' }, 'How does it hit you?'), reactRow,
+      el('p', { class: 'react-label' }, 'What are you talking about? (optional)'), tagRow,
+      el('p', { class: 'react-label' }, 'Your feedback'), comment,
+      msg,
+      el('div', { class: 'row' }, send, mine && el('button', { class: 'link', type: 'button', onclick: () => draw(false) }, 'Cancel'))].filter(Boolean));
   };
-  draw(mine?.reaction ?? null, false);
+  draw(false);
   return box;
 }
 
@@ -728,15 +761,30 @@ function demoRow(dm, d) {
       dm.hidden && el('span', { class: 'tag' }, 'Hidden')),
     el('div', { class: 'demo-play' }, demoPlayer(dm)),
     dm.song_name && el('p', { class: 'pending small' }, `Now a GRYSKLL song: ${dm.song_name}. It’s in the works at Idea/Concept.`),
+    dm.note && el('p', { class: 'react-label' }, mineDemo ? 'What you asked the crew' : `What ${dm.artist_name ?? 'they'} want${dm.artist_name ? 's' : ''} to hear about`),
     dm.note && richText('p', { class: 'demo-note' }, dm.note),
-    mineDemo
-      ? el('div', {}, el('p', { class: 'react-label' }, 'How the crew feels'),
-        el('div', { class: 'reactions' }, REACTIONS.map(([k, label]) =>
-          el('span', { class: `reaction static${(dm[k] ?? 0) > 0 ? ' on' : ''}` }, `${label} `, el('span', { class: 'reaction-count' }, String(dm[k] ?? 0))))))
-      : reactionControls(dm, mine),
-    comments.length > 0 && el('p', { class: 'react-label' }, 'Comments'),
-    comments.length > 0 && el('ul', { class: 'demo-comments' }, comments.map((c) =>
-      el('li', {}, el('strong', {}, c.who), ` (${REACTIONS.find(([k]) => k === c.reaction)?.[1] ?? c.reaction}): ${c.comment}`))));
+    el('div', { class: 'crew-feels' }, el('p', { class: 'react-label' }, 'How the crew feels'),
+      el('div', { class: 'reactions' }, REACTIONS.map(([k, label]) =>
+        el('span', { class: `reaction static${(dm[k] ?? 0) > 0 ? ' on' : ''}` }, `${label} `, el('span', { class: 'reaction-count' }, String(dm[k] ?? 0)))))),
+    !mineDemo && feedbackBox(dm, mine),
+    (mineDemo || comments.length > 0) && el('div', { class: 'feedback-list' },
+      el('p', { class: 'feedback-head' }, mineDemo ? 'Feedback from the crew' : 'Feedback'),
+      mineDemo && el('p', { class: 'feedback-sub' }, comments.length
+        ? 'Tap “This helped” on feedback that was useful. It thanks them and counts toward their Crew Ear badge.'
+        : 'No feedback yet. It usually comes in over a day or two.'),
+      el('ul', { class: 'demo-comments' }, comments.map((c) => el('li', {},
+        el('div', { class: 'fb-who' }, el('strong', {}, c.who), badgeChip(d, c.artist_id),
+          el('span', { class: 'fb-react' }, REACTIONS.find(([k]) => k === c.reaction)?.[1] ?? c.reaction),
+          (c.tags ?? []).map((t) => el('span', { class: 'fb-tag static' }, t))),
+        c.comment && el('p', { class: 'fb-text' }, c.comment),
+        mineDemo && !viewingAs()
+          ? el('button', { class: `helped${c.helpful ? ' on' : ''}`, type: 'button', 'aria-pressed': String(!!c.helpful), onclick: async (e) => {
+            e.currentTarget.disabled = true;
+            const { error } = await supabase.rpc('mark_feedback_helpful', { p_demo: dm.id, p_artist: c.artist_id, p_helpful: !c.helpful });
+            if (error) { e.currentTarget.disabled = false; e.currentTarget.textContent = `Couldn’t save: ${error.message}`; return; }
+            await refresh();
+          } }, c.helpful ? '🙏 You said this helped' : '🙏 This helped')
+          : c.helpful && el('span', { class: 'helped on static' }, '🙏 Marked helpful'))))));
 }
 
 function demosOf(d) {
@@ -757,7 +805,7 @@ function demosPanel(d) {
   const fresh = all.filter((x) => hear.has(x.id));
   const rest = all.filter((x) => !hear.has(x.id));
   return panel('Demos', fresh.length > 0 && countTag(fresh.length, true),
-    el('p', { class: 'small muted' }, 'New music from the crew, for crew consideration. Listen, react, and leave a line for whoever shared it.'),
+    el('p', { class: 'demos-intro' }, 'New music from the crew. People share here hoping for real feedback, so listen and tell them what hit and what you’d change. Feedback they mark helpful earns Crew Ear badges and a monthly shout-out.'),
     !viewingAs() && shareDemoCard(),
     fresh.length > 0 && group('blue', 'New to you', groupCount(fresh.length), el('ul', { class: 'takes' }, fresh.map((x) => demoRow(x, d)))),
     rest.length > 0 && group('gray', fresh.length ? 'Earlier' : 'Shared demos', groupCount(rest.length), el('ul', { class: 'takes' }, rest.map((x) => demoRow(x, d)))),
@@ -775,7 +823,43 @@ function newsView(d) {
       el('details', {},
         el('summary', {}, 'Show read news'),
         el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id))))))),
-  demosPanel(d)];
+  demosPanel(d), crewEarsPanel(d)];
+}
+
+// The monthly shout-out: who gave the most feedback marked helpful.
+function crewEarsPanel(d) {
+  const ears = d.crewEars ?? [];
+  const top = (k) => ears.filter((x) => x[k] > 0).sort((a, b) => b[k] - a[k] || a.name.localeCompare(b.name)).slice(0, 5);
+  const month = (offset) => new Date(new Date().getFullYear(), new Date().getMonth() + offset, 1).toLocaleDateString(undefined, { month: 'long' });
+  const last = top('helpful_last_month');
+  const now = top('helpful_this_month');
+  const list = (rows, k) => el('ol', { class: 'ears-list' }, rows.map((x, i) =>
+    el('li', {}, el('span', { class: 'ears-rank' }, i === 0 ? '🏆' : String(i + 1)), el('strong', {}, x.name), badgeChip(d, x.artist_id),
+      el('span', { class: 'muted' }, `${x[k]} helpful`))));
+  const mineEars = earsOf(d, me.id);
+  return panel('Crew Ears', null,
+    el('p', { class: 'demos-intro' }, 'Shout-out to the crew members whose demo feedback was marked helpful by the person who shared it.'),
+    last.length > 0 && group('amber', `${month(-1)}’s Crew Ears`, null, list(last, 'helpful_last_month')),
+    group('blue', `${month(0)} so far`, null, now.length ? list(now, 'helpful_this_month') : el('p', { class: 'muted' }, 'Nobody yet this month. Give feedback on a demo and it could be you.')),
+    el('p', { class: 'small muted' }, mineEars
+      ? `You: feedback on ${mineEars.feedback} demo${mineEars.feedback === 1 ? '' : 's'}, ${mineEars.helpful} marked helpful.`
+      : 'You haven’t given demo feedback yet.'));
+}
+
+// Home: thank-you notices when someone marks your feedback helpful.
+function thanksNotices(d) {
+  const t = d.feedbackThanks ?? [];
+  if (!t.length || viewingAs()) return null;
+  const b = earBadge(earsOf(d, me.id)?.helpful ?? 0);
+  return el('div', { class: 'thanks-card' },
+    el('p', { class: 'thanks-title' }, '🙏 Your feedback helped'),
+    el('ul', {}, t.map((x) => el('li', {}, `${x.sharer} marked your feedback on “${x.title}” helpful.`))),
+    b && el('p', { class: 'thanks-badge' }, `You’re a ${b[2]} ${b[1]}. Keep it coming.`),
+    el('button', { class: 'primary small', type: 'button', onclick: async (e) => {
+      e.currentTarget.disabled = true;
+      await supabase.rpc('seen_feedback_thanks');
+      await refresh();
+    } }, 'Nice'));
 }
 
 const crewTasksOf = (d) => d.tasks.filter((k) => k.is_crew && !(k.assignee_ids ?? []).includes(me.id));
@@ -1690,6 +1774,7 @@ function draw() {
       el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
     show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `Peace, ${me.name}`), homeHelp()),
+      thanksNotices(current),
       !viewingAs() && el('div', { class: 'home-share' }, shareDemoCard()),
       homeView(current));
   }
@@ -1724,7 +1809,7 @@ async function loadLeadership() {
 }
 
 async function refresh() {
-  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects, effortTakes, demos, demoSummary, demoReactions, demoComments] = await Promise.all([
+  const [takesRes, creditsRes, tasks, announcements, acks, updates, stages, items, contributions, projects, allProjects, effortTakes, demos, demoSummary, demoReactions, demoComments, crewEars, feedbackThanks] = await Promise.all([
     supabase.from('takes')
       .select(`id, name, type, status, due_date, notes, song:songs(${SONG_FIELDS})`)
       .order('due_date', { ascending: true, nullsFirst: false }),
@@ -1747,8 +1832,10 @@ async function refresh() {
     // comments on your demos (or every demo, for Leadership).
     optionalRows(supabase.from('demos').select('*'), 'demos'),
     optionalRows(supabase.rpc('demo_summary'), 'demo summary'),
-    optionalRows(supabase.from('demo_reactions').select('demo_id, artist_id, reaction, comment'), 'demo reactions'),
+    optionalRows(supabase.from('demo_reactions').select('demo_id, artist_id, reaction, comment, tags, helpful_at'), 'demo reactions'),
     optionalRows(supabase.rpc('demo_comments'), 'demo comments'),
+    optionalRows(supabase.rpc('crew_ears'), 'crew ears'),
+    optionalRows(supabase.rpc('my_feedback_thanks'), 'feedback thanks'),
   ]);
   const err = takesRes.error || creditsRes.error;
   if (err) return show(el('p', { class: 'error' }, `Couldn’t load your data: ${err.message}. Refresh to try again.`));
@@ -1756,7 +1843,7 @@ async function refresh() {
   pendingByItem = new Map(updates.map((u) => [`${u.item_type}:${u.item_id}`, u]));
   current = {
     takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects, allProjects, effortTakes,
-    demos, demoSummary, demoReactions, demoComments,
+    demos, demoSummary, demoReactions, demoComments, crewEars, feedbackThanks,
     songs: collectSongs(creditsRes.data, takesRes.data),
   };
   await Promise.all([loadIsrc(), loadLeadership(), loadMixQueue()]);

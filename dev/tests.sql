@@ -236,3 +236,34 @@ select pg_temp.check('the crew sees what song a demo became', (select song_name 
 select pg_temp.login('one@test');
 select pg_temp.check('members can read task project, priority and waiting on',
   (select count(*) from (select project, priority, waiting_on from public.tasks) x) >= 0);
+
+-- Feedback rewards: tags, the sharer's "This helped" mark, thank-you notices, Crew Ears.
+select pg_temp.login('two@test');
+update public.demo_reactions set tags = array['Hook', 'Bass'], comment = repeat('x', 600)
+  where demo_id = (select id from public.demos where title = 'Demo One');
+select pg_temp.check('feedback can be longer and carry tags', (select cardinality(tags) from public.demo_reactions where demo_id = (select id from public.demos where title = 'Demo One')) = 2);
+do $$ begin
+  update public.demo_reactions set tags = array['Cowbell'];
+  raise exception 'FAILED: an unknown tag was accepted';
+exception when check_violation then raise notice 'ok  only the known tags can be used';
+end $$;
+do $$ begin
+  update public.demo_reactions set helpful_at = now();
+  raise exception 'FAILED: a member marked their own feedback helpful';
+exception when insufficient_privilege then raise notice 'ok  you cannot mark your own feedback helpful';
+end $$;
+do $$ begin
+  perform public.mark_feedback_helpful((select id from public.demos where title = 'Demo One'), (select artist_id from public.demo_reactions limit 1), true);
+  raise exception 'FAILED: someone other than the sharer marked feedback helpful';
+exception when raise_exception then
+  if sqlerrm like 'FAILED%' then raise; end if;
+  raise notice 'ok  only the sharer marks feedback helpful';
+end $$;
+select pg_temp.login('one@test');
+select public.mark_feedback_helpful(d.id, r.artist_id, true) from public.demos d join public.demo_reactions r on r.demo_id = d.id where d.title = 'Demo One';
+select pg_temp.check('the sharer sees the helpful mark', (select helpful from public.demo_comments() limit 1));
+select pg_temp.login('two@test');
+select pg_temp.check('the giver gets a thank-you notice', (select count(*) from public.my_feedback_thanks()) = 1);
+select public.seen_feedback_thanks();
+select pg_temp.check('the notice clears once seen', (select count(*) from public.my_feedback_thanks()) = 0);
+select pg_temp.check('Crew Ears counts helpful feedback', (select helpful_this_month from public.crew_ears() where name = 'Member Two') = 1);
