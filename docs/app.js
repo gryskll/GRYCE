@@ -534,7 +534,7 @@ async function uploadToDrive(file, onProgress) {
   return info.webViewLink;
 }
 
-// Share a demo: a big green card that opens the form. On Home and in Crew news.
+// Share a demo: a big green card that opens the form. On Home and in Demos.
 function shareDemoCard() {
   const box = el('div', { class: 'share-demo' });
   const closed = () => box.replaceChildren(
@@ -631,8 +631,8 @@ function shareDemoCard() {
     },
     el('h3', { class: 'share-form-title' }, 'Share a demo'),
     el('p', { class: 'small muted' }, GOOGLE_CLIENT_ID
-      ? 'Upload the track to your own Google Drive, or paste a Google Drive link. A pasted link has to be shared as “Anyone with the link”. The whole crew sees it in Crew news.'
-      : 'Paste a Google Drive link. Set its sharing to “Anyone with the link” first. The whole crew sees it in Crew news.'),
+      ? 'Upload the track to your own Google Drive, or paste a Google Drive link. A pasted link has to be shared as “Anyone with the link”. The whole crew sees it in Demos.'
+      : 'Paste a Google Drive link. Set its sharing to “Anyone with the link” first. The whole crew sees it in Demos.'),
     title,
     upBtn && el('div', { class: 'row' }, upBtn, picker),
     upBtn && popupTip,
@@ -823,7 +823,12 @@ function newsView(d) {
       el('details', {},
         el('summary', {}, 'Show read news'),
         el('ul', { class: 'takes' }, read.map((a) => announcementRow(a, ackBy.get(a.id))))))),
-  demosPanel(d), crewEarsPanel(d)];
+  ];
+}
+
+// Demos: their own section, apart from Crew news.
+function demosView(d) {
+  return [demosPanel(d), crewEarsPanel(d)];
 }
 
 // The monthly shout-out: who gave the most feedback marked helpful.
@@ -1647,11 +1652,10 @@ function homeView(d) {
     tile('owe', 'What you owe', String(o.count),
       o.overdue ? 'Something’s overdue' : o.count ? 'Waiting on you' : 'All clear',
       o.overdue ? 'bad' : o.count ? 'hot' : null),
+    tile('news', 'Crew news', String(news.unread.length), news.unread.length ? 'Unread' : 'Caught up', news.unread.length ? 'hot' : null),
     (() => {
-      const demos = demosToHear(d).length;
-      const n = news.unread.length + demos;
-      const sub = demos && news.unread.length ? `Unread, ${demos} new demo${demos === 1 ? '' : 's'}` : demos ? `${demos} new demo${demos === 1 ? '' : 's'}` : news.unread.length ? 'Unread' : 'Caught up';
-      return tile('news', 'Crew news', String(n), sub, n ? 'hot' : null);
+      const hear = demosToHear(d).length;
+      return tile('demos', 'Demos', String(hear), hear ? `New to hear, give feedback` : 'Share yours', hear ? 'hot' : null);
     })(),
     tile('crew', 'Crew tasks', String(crewOpen), crewOpen ? 'Open' : 'None open'),
     (() => {
@@ -1680,8 +1684,8 @@ function homeView(d) {
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
 
-const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, mix: mixView, leadership: leadershipView, support: supportView };
-const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Projects', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', mix: 'Mix queue', leadership: 'Leadership',
+const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, demos: demosView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, mix: mixView, leadership: leadershipView, support: supportView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', demos: 'Demos', crew: 'Crew tasks', projects: 'Projects', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', mix: 'Mix queue', leadership: 'Leadership',
   'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions', support: 'Support' };
 // Sections only some members get. Anyone else who types the address lands on Home.
 const allowed = (key) => (key === 'isrc' ? me?.isrc_admin && !viewingAs()

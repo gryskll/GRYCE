@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.37, November 20, 2026
+- Demos has its own tile and page, separate from Crew news. Crew Ears moved there too.
+
 ## v0.4.36, November 20, 2026
 - Feedback first: every demo you didn't share has a big feedback box. Pick how it hits you, tag what you're talking about (Hook, Bass, Drums, Vocals, Mix, Arrangement, Vibe), and say what hit and what you'd change. Up to 1,000 characters.
 - The member who shared a demo can tap "This helped" on feedback. You get a thank-you on Home, and it counts toward Crew Ear badges: Crew Ear (1), Sharp Ear (3), Golden Ear (10), Legendary Ear (25).
