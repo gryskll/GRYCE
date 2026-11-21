@@ -659,6 +659,29 @@ function reactionControls(dm, mine) {
   return box;
 }
 
+// Google Drive links play right in gryCE through Drive's own preview player.
+function driveFileId(url) {
+  try {
+    const u = new URL(url);
+    if (!/(^|\.)(drive|docs)\.google\.com$/.test(u.hostname)) return null;
+    return u.pathname.match(/\/file\/d\/([\w-]{10,})/)?.[1] ?? u.searchParams.get('id');
+  } catch { return null; }
+}
+function demoPlayer(dm) {
+  const id = driveFileId(dm.link);
+  if (!id) return linkButton(dm.link, 'Listen');
+  const slot = el('div', { class: 'demo-player', hidden: true });
+  const btn = el('button', { class: 'ghost small play-btn', type: 'button', onclick: () => {
+    const opening = slot.hidden;
+    slot.replaceChildren(opening
+      ? el('iframe', { src: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`, title: `Play ${dm.title}`, allow: 'autoplay; fullscreen', loading: 'lazy' })
+      : '');
+    slot.hidden = !opening;
+    btn.textContent = opening ? '■ Close player' : '▶ Play';
+  } }, '▶ Play');
+  return [btn, slot];
+}
+
 function demoRow(dm, d) {
   const mineDemo = dm.artist_id === me.id;
   const mine = (d.demoReactions ?? []).find((r) => r.demo_id === dm.id && r.artist_id === me.id);
@@ -668,9 +691,9 @@ function demoRow(dm, d) {
       el('span', { class: 'take-song' }, dm.title),
       el('span', { class: 'take-name' }, `${mineDemo ? 'You' : dm.artist_name ?? 'A member'} · ${fmtDate(dm.created_at)}`)),
     el('div', { class: 'take-meta' },
-      linkButton(dm.link, 'Listen'),
       dm.status && dm.status !== 'New' && el('span', { class: `tag ${DEMO_STATUS_TONE[dm.status] ?? ''}` }, dm.status),
       dm.hidden && el('span', { class: 'tag' }, 'Hidden')),
+    el('div', { class: 'demo-play' }, demoPlayer(dm)),
     dm.song_name && el('p', { class: 'pending small' }, `Now a GRYSKLL song: ${dm.song_name}. It’s in the works at Idea/Concept.`),
     richText('p', { class: 'ann-body' }, dm.note),
     mineDemo
