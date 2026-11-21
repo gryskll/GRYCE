@@ -409,24 +409,41 @@ for (const p of takePages) {
   });
 }
 
-// Tasks: only pages with an Assignee or Owner set to Crew are read.
-// Everything else on Shaah and Yani's list stays in Notion.
+// Tasks: pages with an Assignee, an Owner that names an artist, or Owner set to Crew.
+// A task with an Owner shows only to that artist in gryCE, the same as an Assignee.
+// Owner is matched to an artist's Name or any name in their Also Known As field,
+// so an Owner like "Shaah" reaches Dragon's Pitchfork once "Shaah" is in Also Known As.
+// "A + B" owners go to both. Owners that match nobody (TBD) stay in Notion.
+const normName = (s) => (s ?? '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
+const artistByName = new Map();
+for (const a of artists) {
+  for (const n of [a.name, ...(a.also_known_as ?? '').split(/[,;\n]/)]) {
+    const k = normName(n);
+    if (k && !artistByName.has(k)) artistByName.set(k, a.id);
+  }
+}
+const ownerArtists = (owner) => (owner ?? '').split('+').map((o) => artistByName.get(normName(o))).filter(Boolean);
 const tasks = !TASKS_DB ? null : await optional('tasks', async () => {
   const pages = await queryAll(await dataSourceId(TASKS_DB), {
     or: [
       { property: TASK_PROPS.assignee, relation: { is_not_empty: true } },
-      { property: TASK_PROPS.owner, select: { equals: TASK_PROPS.crewOwner } },
+      { property: TASK_PROPS.owner, select: { is_not_empty: true } },
     ],
   });
   const rows = [];
   for (const p of pages) {
+    const owner = select(p.properties[TASK_PROPS.owner]);
+    const isCrew = owner === TASK_PROPS.crewOwner;
+    const assigned = (await relation(p, TASK_PROPS.assignee)).filter((id) => artistIds.has(id));
+    const assignees = [...new Set([...assigned, ...(isCrew ? [] : ownerArtists(owner))])];
+    if (!isCrew && assignees.length === 0) continue;   // nobody in gryCE to show it to
     rows.push({
       id: p.id,
       name: titleOf(p) ?? '(untitled task)',
       status: statusOrSelect(p.properties[TASK_PROPS.status]),
       due_date: firstDate(p, TASK_PROPS.due),
-      assignee_ids: (await relation(p, TASK_PROPS.assignee)).filter((id) => artistIds.has(id)),
-      is_crew: select(p.properties[TASK_PROPS.owner]) === TASK_PROPS.crewOwner,
+      assignee_ids: assignees,
+      is_crew: isCrew,
       // Group effort: the takes this crew task depends on. gryCE Note is the
       // crew-facing line. Notes stays private and is never synced.
       linked_take_ids: await relation(p, 'Linked Deliverables'),

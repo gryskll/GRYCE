@@ -68,6 +68,10 @@ Every table and the three functions carry a comment explaining what they are (`s
 - Supporters (on the GRYSCO Leadership page): contact details. The sync only reads which supporter a contribution links to.
 - Asset Inventory (GRYSCO Leadership page): never shared with any connection.
 
+### Who a task goes to
+
+A GRYSKLL Tasks page shows in gryCE to its **Assignee** (an Artists relation) and to whoever its **Owner** select names. Owner is matched to an artist's Name or any name in their Also Known As field, ignoring case and punctuation, so add a nickname there when the Owner list uses one. "A + B" goes to both. Owner **Crew** shows to every member. A task that reaches nobody stays in Notion. The private Notes field never syncs.
+
 ### Two Notion connections
 
 - **gryCE Sync** reads. It can see the Music Catalog, GRYSKLL Tasks, the Document Number Registry and Supporters.

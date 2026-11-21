@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.23, November 20, 2026
+- Tasks reach the right person by their Owner in Notion, not only by Assignee. Each task shows only to the person it belongs to. A task owned by "A + B" shows to both.
+- Owner is matched to an artist's name or a name in their Also Known As field.
+
 ## v0.4.22, November 20, 2026
 - gryCE moved from GitHub Pages to Cloudflare Pages. Same address, same sign-in. Nothing changes for members.
 
