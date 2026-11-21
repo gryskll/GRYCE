@@ -80,6 +80,11 @@ const tables = {
   ].filter((p) => !p.leadership_only || me.leadership),
   songs: Object.values(S).map((x) => ({ ...x, isrc: x.status === 'Released' ? `QT-3ZB-24-0000${x.id.length}` : null, isrc_reissue: null })),
   isrc_codes: [],
+  demos: [
+    { id: 'dm1', artist_id: 'a2', title: 'Rooftop Sketch', link: 'https://drive.google.com/file/d/demo/view', note: 'Rough idea, needs a hook. Listen from 0:40.', created_at: new Date(Date.now() - 864e5).toISOString(), status: 'New', hidden: false },
+    { id: 'dm2', artist_id: 'me', title: 'Slow Burn', link: 'https://boombox.io/demo', note: null, created_at: new Date(Date.now() - 5 * 864e5).toISOString(), status: 'Maybe', hidden: false },
+  ],
+  demo_reactions: [],
   documents: [
     { id: 'd1', number: 'GRY-DOC-001', name: 'Crew agreement', status: 'Approved', date_submitted: '2026-01-10', date_approved: '2026-02-01', link: 'https://example.com' },
     { id: 'd2', number: 'GRY-DOC-002', name: 'Revenue split draft', status: 'Needs Input', date_submitted: day(-4), link: 'https://example.com' },
@@ -99,6 +104,12 @@ const rpcs = {
     { id: 'c2', artist_name: null, contributor_name: 'A Kind Supporter', linked: true, project_name: 'Demo Album', stage_name: 'Mixing', amount: 300, type: 'Crewmunity', repayment: null, contributed_on: '2026-06-12' },
     { id: 'c3', artist_name: null, contributor_name: 'Unlinked gift', linked: false, project_name: 'Demo Album', stage_name: null, amount: 75, type: 'Crewmunity', repayment: null, contributed_on: '2025-11-02' },
   ],
+  demo_summary: () => [
+    { demo_id: 'dm1', artist_name: 'Another Artist', feeling: 3, want_on: 1, not_for_me: 0, comments: 1 },
+    { demo_id: 'dm2', artist_name: me.name, feeling: 2, want_on: 2, not_for_me: 1, comments: 1 },
+  ],
+  demo_comments: () => [{ demo_id: 'dm2', who: 'Third Artist', reaction: 'want_on', comment: 'I hear a verse on the second half.', updated_at: new Date().toISOString() }],
+  mix_people: () => [{ id: 'm1', name: 'Mix Engineer', mixes: true, masters: false }, { id: 'm2', name: 'Master Engineer', mixes: false, masters: true }, { id: 'me', name: me.name, mixes: true, masters: false }],
   support_status: () => [{
     is_support: me.support, viewing_id: as === 'viewing' ? 'me' : null, viewing_name: as === 'viewing' ? me.name : null,
     expires_at: new Date(Date.now() + 30 * 6e4).toISOString(),
@@ -108,9 +119,9 @@ const rpcs = {
   stop_view_as: () => { location.search = '?as=support'; return null; },
   issue_isrc: () => 'QT-3ZB-26-00099',
   mix_queue: () => [
-    { song_id: 's-c', song: 'Copper Wire', stage: 'Mixing', queue_order: 1, project: 'Demo Album', mixers: 'Mix Engineer', mastering: null, target_release_date: day(60), owed: [] },
+    { song_id: 's-c', song: 'Copper Wire', stage: 'Mixing', queue_order: 1, project: 'Demo Album', mixers: 'Mix Engineer', mixer_ids: ['m1'], mastering_ids: [], mastering: null, target_release_date: day(60), owed: [] },
     { song_id: 's-x', song: 'Low Light', stage: 'Mixing Prep', queue_order: 2, project: 'Demo Album', mixers: null, mastering: null, target_release_date: null, owed: [{ who: 'Another Artist', type: 'Stems', status: 'Owed' }, { who: 'Demo Member', type: 'Verse', status: 'Submitted' }] },
-    { song_id: 's-y', song: 'Harbor Song', stage: 'Mastering', queue_order: 3, project: 'Remix EP', mixers: 'Mix Engineer', mastering: 'Master Engineer', target_release_date: day(20), owed: [] },
+    { song_id: 's-y', song: 'Harbor Song', stage: 'Mastering', queue_order: 3, project: 'Remix EP', mixers: 'Mix Engineer', mixer_ids: ['m1'], mastering_ids: ['m2'], mastering: 'Master Engineer', pending: { stage: 'Release Ready', by: 'Mix Engineer', attempts: 0 }, target_release_date: day(20), owed: [] },
     { song_id: 's-b', song: 'Night Bus', stage: 'Awaiting Mix Funding', queue_order: 5, project: 'Demo Album', mixers: null, mastering: null, target_release_date: null, owed: [{ who: 'Demo Member', type: 'Lyrics', status: 'Owed' }] },
   ],
 };
@@ -127,6 +138,7 @@ function query(table) {
       rows.push({ ...row, artist_id: 'me', created_at: new Date().toISOString(), attempts: 0, acknowledged_at: new Date().toISOString() });
       return Promise.resolve({ data: null, error: null });
     },
+    upsert: (row) => q.insert(row),
     then: (ok, bad) => Promise.resolve({ data: one ? rows[0] ?? null : rows, error: null }).then(ok, bad),
   };
   return q;

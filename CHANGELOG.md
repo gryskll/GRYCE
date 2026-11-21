@@ -2,6 +2,12 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.25, November 20, 2026
+- Mix queue: Q and Shaah can edit a song's stage, mixer and mastering engineer right in gryCE. Changes reach Notion within 10 minutes, with a note saying who made them.
+- Demos: share a demo in Crew news with a Boombox or Google Drive link. The crew reacts with Feeling it, Want on it or Not for me, plus an optional comment that only the person who shared it and Leadership see.
+- Crew news on Home counts new demos you haven't heard yet.
+- gryCE now syncs with Notion every 10 minutes instead of 30.
+
 ## v0.4.24, November 20, 2026
 - Mix queue: Q and Shaah get a Mix queue tile with every unreleased song in a mix stage, grouped Mixing now, Up next, Mastering and Waiting on mix funding. Each song shows its project, mixer, mastering engineer and anything still owed on it.
 - Notion: a Mix Queue checkbox on Artists decides who sees it.

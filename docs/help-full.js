@@ -37,7 +37,7 @@ const HELP = `
         <li><strong>Mark done</strong> on a task closes it out.</li>
         <li><strong>Add a note</strong> sends Shaah a note without changing anything.</li>
       </ul>
-      <p>Links need to start with https://. Updates reach GRYSKLL's records within 30 minutes. Until then you'll see a blue note under the item saying it's on its way.</p>
+      <p>Links need to start with https://. Updates reach GRYSKLL's records within 10 minutes. Until then you'll see a blue note under the item saying it's on its way.</p>
       <p class="muted">If you see "Your update didn't reach Notion," text Shaah so he can check it.</p>
     </section>
 <section class="card">
@@ -67,7 +67,7 @@ const HELP = `
 <section class="card">
       <h2>ISRC codes</h2>
       <p>ISRC Admins get an <strong>ISRC codes</strong> tile. It lists every song without a code. Tap <strong>Issue code</strong>, pick Original for a first release or Reissue for a song GRYSKLL is putting out again, then <strong>Issue</strong>.</p>
-      <p>gryCE picks the next number, so two people can never get the same code. The code shows right away with a Copy button, and it lands on the song in GRYSKLL's records within 30 minutes. A code can never be reused, so check the song before you tap Issue.</p>
+      <p>gryCE picks the next number, so two people can never get the same code. The code shows right away with a Copy button, and it lands on the song in GRYSKLL's records within 10 minutes. A code can never be reused, so check the song before you tap Issue.</p>
     </section>
 <section class="card">
       <h2>Leadership</h2>
@@ -85,9 +85,15 @@ const HELP = `
       </ul>
     </section>
 <section class="card">
+      <h2>Demos</h2>
+      <p>Got something new? Open <strong>Crew news</strong> and tap <strong>Share a demo</strong>. Give it a title, paste a link to the reference track on Boombox or Google Drive, and add a line about what to listen for. For a Drive file, set sharing to anyone with the link first. The whole crew sees it right away.</p>
+      <p>On someone else's demo, tap <strong>Feeling it</strong>, <strong>Want on it</strong> or <strong>Not for me</strong>, and add a comment if you want. Everyone sees the counts. Only the person who shared it and the Leadership Team see your comment. Leadership marks demos Maybe, Picked up or Passed as the crew decides.</p>
+    </section>
+<section class="card">
       <h2>Mix queue</h2>
       <p>Q runs the mix queue and Shaah backs him up, so they get a <strong>Mix queue</strong> tile. It lists every unreleased song in a mix stage, in the order the work happens: Mixing now, Up next (mix prep), Mastering, then Waiting on mix funding.</p>
-      <p>Each song shows its project, who's mixing and mastering it, and anything still owed on it, so you can see what's holding a mix up. To move a song along, change its Development Stage in Notion. gryCE catches up within 30 minutes.</p>
+      <p>Each song shows its project, who's mixing and mastering it, and anything still owed on it, so you can see what's holding a mix up.</p>
+      <p>Tap <strong>Edit</strong> on a song to change its stage, mixer or mastering engineer. The change shows right away as on its way, and reaches Notion within 10 minutes with a note saying who made it. Setting a song to Release Ready takes it out of the queue.</p>
     </section>
 <section class="card">
       <h2>Support: View as</h2>
@@ -109,7 +115,7 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Something looks wrong</h2>
-      <p>gryCE pulls from GRYSKLL's records every 30 minutes, so a change can take that long to show up. If a credit is missing, a song is in the wrong place, or a due date looks off, text Shaah what you see. A screenshot helps.</p>
+      <p>gryCE pulls from GRYSKLL's records every 10 minutes, so a change can take that long to show up. If a credit is missing, a song is in the wrong place, or a due date looks off, text Shaah what you see. A screenshot helps.</p>
     </section>
 <section class="card">
       <h2>Your account</h2>
