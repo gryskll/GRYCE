@@ -1,0 +1,17 @@
+digraph A {
+  graph [rankdir=TB, fontname="Helvetica", nodesep=0.5, ranksep=0.4, pad=0.3, dpi=200];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10.5, fillcolor="#f4f4f4", color="#555555", margin="0.15,0.08"];
+  edge [color="#666666", fontname="Helvetica", fontsize=9];
+  jwt [label="Signed-in Google email\n(auth.jwt)", fillcolor="#ffffff"];
+  signed [label="private.signed_in_artist_id()\nArtists row whose Email matches"];
+  va [label="private.viewing_as()\nopen, unexpired View as session\n(Support only)"];
+  cur [label="private.current_artist_id()\nviewing_as  or  signed-in member", fillcolor="#ecf8ef", color="#5fb878"];
+  flags [label="is_leadership()\nis_isrc_admin()\nis_mix_queue()"];
+  pol [label="Row level security policies\nown rows, crew rows, Leadership Only,\ndocuments, ISRC, mix queue, demos", fillcolor="#ecf8ef", color="#5fb878"];
+  writes [label="Writes\nmember_updates, acks, issue_isrc(),\nmix edits, demos, feedback, This helped\nrefused while viewing_as is set", fillcolor="#fdeee8", color="#e08a5a"];
+  jwt -> signed -> va -> cur;
+  signed -> cur [style=dashed, label="no session"];
+  cur -> flags -> pol;
+  cur -> pol;
+  va -> writes [label="blocks"];
+}

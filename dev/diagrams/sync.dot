@@ -1,0 +1,11 @@
+digraph S {
+  graph [rankdir=TB, fontname="Helvetica", nodesep=0.3, ranksep=0.35, pad=0.3, dpi=200];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, fillcolor="#f4f4f4", color="#555555", width=5.2, margin="0.2,0.1"];
+  edge [color="#666666"];
+  start [label="GitHub Action starts (every 10 minutes, or Run workflow)", fillcolor="#eef3fb"];
+  p1 [label="1. Push  (gryCE Write)\nmember_updates  to  Deliverables / Tasks, with a comment (gives up after 5 tries)\nisrc_codes  to  the song's ISRC field.   song_updates (mix edits)  to  Songs\nnew demos  to  a Demos page.   demo feedback  to  a comment + Reactions counts\nPicked up demos with no Song  to  a new Songs page at Idea/Concept", fillcolor="#fff7e6"];
+  p2 [label="2. Pull\nQuery every Notion database (gryCE Sync), map properties to rows,\ntasks routed by Assignee or Owner (Also Known As), demo Status read back,\nupsert into Supabase parents first, then delete rows that are gone.\nStops before deleting if a database comes back empty.", fillcolor="#ecf8ef"];
+  p3 [label="3. Write back\n\"Acknowledged by\" on each announcement in Notion", fillcolor="#fff7e6"];
+  end [label="Log line: Synced N artists, N songs, ... Pushed N member updates, N demos.", fillcolor="#eef3fb"];
+  start -> p1 -> p2 -> p3 -> end;
+}

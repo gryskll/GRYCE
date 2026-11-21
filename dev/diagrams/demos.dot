@@ -1,0 +1,15 @@
+digraph D {
+  graph [rankdir=TB, fontname="Helvetica", nodesep=0.35, ranksep=0.35, pad=0.3, dpi=200];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10.5, fillcolor="#f4f4f4", color="#555555", width=5.4, margin="0.18,0.08"];
+  edge [color="#666666", fontname="Helvetica", fontsize=9];
+  share [label="1. Share a demo (Home or #demos)\nUpload: tap 1 asks Google (drive.file), tap 2 picks the file, resumable upload\nto the member's Drive, shared anyone-with-link.   Or paste a Drive link.", fillcolor="#eef3fb"];
+  check [label="2. Link check (pasted links only)\nDrive API with GOOGLE_API_KEY: 404 = private, tell the member to fix sharing.\nFolder or not audio/video: refused.  403 = key problem, let through.", fillcolor="#fff7e6"];
+  row [label="3. Row in demos (Supabase). Sync creates the Notion Demos page.", fillcolor="#ecf8ef"];
+  listen [label="4. Crew listens: one tap streams files/ID?alt=media into <audio>.\nDrive's preview iframe is only the fallback.", fillcolor="#eef3fb"];
+  fb [label="5. Feedback box: reaction + tags + text (up to 1,000 characters)\ndemo_reactions. Sharer and Leadership read it. Sync posts it as a Notion comment.", fillcolor="#eef3fb"];
+  helped [label="6. Sharer taps This helped  (mark_feedback_helpful)", fillcolor="#fdeee8", color="#e08a5a"];
+  rewards [label="Thank-you card on the giver's Home  |  Crew Ear badge  |  Crew Ears monthly shout-out", fillcolor="#ecf8ef", color="#5fb878"];
+  song [label="Leadership sets Picked up in Notion: the sync creates the song at Idea/Concept\nwith the credit role the member chose, and links it back to the demo.", fillcolor="#fff7e6"];
+  share -> check -> row -> listen -> fb -> helped -> rewards;
+  row -> song [style=dashed];
+}

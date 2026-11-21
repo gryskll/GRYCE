@@ -1,0 +1,52 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="white", fontname="Helvetica", nodesep=0.45, ranksep=0.9, pad=0.3, dpi=200];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#555555", fillcolor="#f4f4f4", margin="0.18,0.10"];
+  edge  [fontname="Helvetica", fontsize=9, color="#666666", fontcolor="#333333"];
+
+  subgraph cluster_notion { label="Notion  (source of truth, one-member Free workspace)"; style="rounded,filled"; fillcolor="#fff7e6"; color="#e0b25a"; fontsize=11;
+    n_cat  [label="GRYSKLL Music Catalog\nArtists, Songs, Deliverables,\nMusic Projects, Announcements,\nFunding, Contributions, Demos"];
+    n_task [label="GRYSKLL Tasks"];
+    n_lead [label="GRYSCO Leadership page\nDocument Number Registry,\nSupporters"];
+  }
+
+  subgraph cluster_gh { label="GitHub  (gryskll/gryce, public)"; style="rounded,filled"; fillcolor="#eef3fb"; color="#7a9cd6"; fontsize=11;
+    repo [label="Repository\ndocs/  site\nscripts/  sync\nsupabase/  SQL\ndev/  demo + tests"];
+    sync [label="Action: Sync Notion to Supabase\nevery 10 min + manual\nscripts/sync-notion.mjs"];
+    tests [label="Action: Tests\non every pull request"];
+  }
+
+  subgraph cluster_sb { label="Supabase  (free plan)"; style="rounded,filled"; fillcolor="#ecf8ef"; color="#5fb878"; fontsize=11;
+    db   [label="Postgres\ntables + row level security\nissue_isrc(), View as,\nmix queue, demo feedback"];
+    auth [label="Auth\nGoogle sign-in"];
+  }
+
+  subgraph cluster_cf { label="Cloudflare  (free plan)"; style="rounded,filled"; fillcolor="#fdeee8"; color="#e08a5a"; fontsize=11;
+    pages [label="Cloudflare Pages\nserves docs/\npreview link per PR"];
+  }
+
+  dns  [label="Squarespace DNS\ngryce  CNAME  to pages.dev", fillcolor="#ffffff"];
+  user [label="Member's browser\ngryce.gryskll.com", shape=box, fillcolor="#ffffff", color="#333333"];
+  subgraph cluster_g { label="Google  (free)"; style="rounded,filled"; fillcolor="#f3eefb"; color="#9a7ad6"; fontsize=11;
+    google [label="Google accounts\nOAuth sign-in"];
+    drive  [label="Member's own Google Drive\nGRYSKLL demos (gryCE) folder"];
+    dapi   [label="Drive API\nrestricted public key"];
+  }
+
+  n_cat -> sync  [label="read (gryCE Sync)", dir=both, arrowtail=none];
+  n_task -> sync [label="read"];
+  n_lead -> sync [label="read"];
+  sync -> n_cat [label="write back: updates, acks,\nISRC codes, mix edits,\ndemos, feedback\n(gryCE Write)", style=dashed, constraint=false];
+  sync -> db    [label="upsert + delete stale\n(secret key)"];
+  db -> sync    [label="member_updates, song_updates,\nacks, ISRC codes,\ndemos, demo_reactions", style=dashed];
+
+  repo -> pages [label="deploy main\non merge"];
+  repo -> tests;
+  dns -> pages  [style=dotted, label="resolves to"];
+  user -> pages [label="HTML, CSS, JS"];
+  user -> db    [label="queries with\npublishable key"];
+  user -> auth  [label="sign in"];
+  auth -> google [label="OAuth"];
+  user -> drive [label="upload demo\n(drive.file, resumable)"];
+  user -> dapi  [label="check link,\nstream for Play"];
+  dapi -> drive [style=dotted];
+}
