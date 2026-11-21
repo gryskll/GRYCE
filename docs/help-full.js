@@ -24,7 +24,7 @@ const HELP = `
       <ul>
         <li><strong>Requests:</strong> things Shaah or the crew asked everyone for, like lyric sheets. Tap <strong>Acknowledge</strong> once you've seen it.</li>
         <li><strong>Deliverables:</strong> what you owe on a song, like verses, hooks, beats, stems, lyrics, mixes and artwork, with due dates. Overdue ones are flagged in red.</li>
-        <li><strong>Tasks:</strong> tasks that are yours. Only you see them.</li>
+        <li><strong>Tasks:</strong> tasks that are yours, grouped by project, with Now and This week first. Only you see them.</li>
         <li><strong>Submitted, waiting on review:</strong> deliverables you've turned in that Shaah hasn't checked yet.</li>
         <li><strong>Done:</strong> tap it to see what's finished. A deliverable marked <strong>Not used</strong> was reviewed and left off the song. You don't owe anything on it.</li>
       </ul>
@@ -86,7 +86,7 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Demos</h2>
-      <p>Got something new? Open <strong>Crew news</strong> and tap <strong>Share a demo</strong>. Give it a title, paste a link to the reference track on Boombox or Google Drive, and add a line about what to listen for, and choose how you'd be credited if it becomes a GRYSKLL song: the beat or track, vocals, or both. For a Drive file, set sharing to anyone with the link first. The whole crew sees it right away.</p>
+      <p>Got something new? Tap <strong>Share a demo</strong> on Home or in Crew news. Give it a title, paste a link to the reference track on Boombox or Google Drive, and add a line about what to listen for, and choose how you'd be credited if it becomes a GRYSKLL song: the beat or track, vocals, or both. For a Drive file, set sharing to anyone with the link first. The whole crew sees it right away.</p>
       <p>On someone else's demo, tap <strong>Feeling it</strong>, <strong>Want on it</strong> or <strong>Not for me</strong>, and add a comment if you want. Everyone sees the counts. Only the person who shared it and the Leadership Team see your comment. Leadership marks demos Maybe, Picked up or Passed as the crew decides. A demo that's Picked up becomes a GRYSKLL song: it starts at Idea/Concept, credits you the way you chose, and the demo says what song it became.</p>
     </section>
 <section class="card">

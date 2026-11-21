@@ -328,6 +328,23 @@ function takeRow(t) {
     isOpenTake(t) && !pending && updateForm('take', t.id, 'Submitted', { askLink: true }));
 }
 
+// Your tasks, grouped by their Project in Notion. Within a project: Now, then
+// This week, then Later, then by due date. Projects with something marked Now come first.
+const PRIORITY_RANK = { Now: 0, 'This week': 1, Later: 2 };
+const priorityRank = (k) => PRIORITY_RANK[k.priority] ?? 1.5;
+function tasksByProject(list) {
+  const groups = new Map();
+  for (const k of list) {
+    const key = k.project || 'No project';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(k);
+  }
+  for (const g of groups.values()) g.sort((a, b) => priorityRank(a) - priorityRank(b) || byDue(a, b));
+  const best = (g) => Math.min(...g.map(priorityRank));
+  return [...groups].sort(([a, ga], [b, gb]) =>
+    (a === 'No project') - (b === 'No project') || best(ga) - best(gb) || a.localeCompare(b));
+}
+
 function taskRow(k, mine) {
   const due = fmtDate(k.due_date);
   const overdue = isOpenTask(k) && isPast(k.due_date);
@@ -337,10 +354,13 @@ function taskRow(k, mine) {
       el('span', { class: 'take-song' }, k.name)),
     el('div', { class: 'take-meta' },
       k.is_crew && el('span', { class: 'tag' }, 'Crew'),
+      k.priority === 'Now' && el('span', { class: 'tag status-owed' }, 'Now'),
+      k.priority === 'This week' && el('span', { class: 'tag doc-needs-input' }, 'This week'),
       k.status && el('span', { class: `tag task-${slug(k.status)}` }, k.status),
       due && el('span', { class: overdue ? 'due overdue' : 'due' }, overdue ? `Overdue · ${due}` : `Due ${due}`),
       linkButton(k.link)),
     richText('p', { class: 'take-notes' }, k.gryce_note),
+    k.waiting_on && el('p', { class: 'take-notes' }, `Waiting on: ${k.waiting_on}`),
     pending,
     mine && isOpenTask(k) && !pending && updateForm('task', k.id, 'Done', { askLink: true }));
 }
@@ -388,7 +408,9 @@ function oweView(d) {
       anchored('owe-takes', o.openTakes.length > 0 && group('red', 'Deliverables', groupCount(o.openTakes.length),
         el('ul', { class: 'takes' }, o.openTakes.map(takeRow)))),
       anchored('owe-tasks', o.openTasks.length > 0 && group('blue', 'Tasks', groupCount(o.openTasks.length),
-        el('ul', { class: 'takes' }, o.openTasks.map((k) => taskRow(k, true))))),
+        ...tasksByProject(o.openTasks).map(([project, list]) => [
+          el('h5', { class: 'sub-head' }, project, el('span', { class: 'muted' }, ` · ${list.length}`)),
+          el('ul', { class: 'takes' }, list.map((k) => taskRow(k, true)))]).flat())),
       o.docsToReview.length > 0 && anchored('owe-docs', el('div', {}, docGroups(o.docsToReview))),
       anchored('owe-submitted', submitted.length > 0 && group('gray', 'Submitted, waiting on review', groupCount(submitted.length),
         el('ul', { class: 'takes' }, submitted.map(takeRow)))),
@@ -1448,7 +1470,9 @@ function draw() {
       parent ? el('a', { class: 'back', href: `#${parent}` }, `‹ ${VIEW_TITLES[parent]}`) : backLink(),
       el('span', { class: 'here' }, VIEW_TITLES[key])), view(current));
   } else {
-    show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `Peace, ${me.name}`), homeHelp()), homeView(current));
+    show(el('div', { class: 'home-head' }, el('p', { class: 'eyebrow' }, `Peace, ${me.name}`), homeHelp()),
+      !viewingAs() && el('div', { class: 'home-share' }, shareDemoForm()),
+      homeView(current));
   }
   window.scrollTo(0, 0);
 }

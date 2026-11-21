@@ -603,6 +603,10 @@ const tasks = !TASKS_DB ? null : await optional('tasks', async () => {
       linked_take_ids: await relation(p, 'Linked Deliverables'),
       gryce_note: text(p.properties['gryCE Note']),
       link: url(p.properties['Link']),
+      // v0.4.28: context for the person the task belongs to.
+      project: select(p.properties['Project']),
+      priority: select(p.properties['Priority']),
+      waiting_on: text(p.properties['Waiting on']),
       synced_at: runStart,
     });
   }
@@ -834,7 +838,17 @@ await upsertNewCols('songs', songs, V041_SONG);
 await upsert('song_credits', credits, 'song_id,artist_id,role');
 await upsert('takes', takes, 'id');
 // V2 tables may not exist yet in Supabase. A failed save skips that table's cleanup too.
-const tasksSaved = tasks && (await optional('tasks save', () => upsert('tasks', tasks, 'id').then(() => true)));
+const V428_TASK = ['project', 'priority', 'waiting_on'];
+const tasksSaved = tasks && (await optional('tasks save', async () => {
+  try {
+    await upsert('tasks', tasks, 'id');
+  } catch (e) {
+    if (!/column|schema cache/i.test(e.message)) throw e;
+    console.warn('tasks: v0.4.28 columns missing, saved without them. Run supabase/migrations/v4-10-task-context.sql.');
+    await upsert('tasks', without(tasks, V428_TASK), 'id');
+  }
+  return true;
+}));
 const annSaved = announcements && (await optional('announcements save', () => upsert('announcements', announcements, 'id').then(() => true)));
 
 const save = (label, table, rows) =>
