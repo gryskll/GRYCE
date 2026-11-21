@@ -85,6 +85,11 @@ const HELP = `
       </ul>
     </section>
 <section class="card">
+      <h2>Mix queue</h2>
+      <p>Q runs the mix queue and Shaah backs him up, so they get a <strong>Mix queue</strong> tile. It lists every unreleased song in a mix stage, in the order the work happens: Mixing now, Up next (mix prep), Mastering, then Waiting on mix funding.</p>
+      <p>Each song shows its project, who's mixing and mastering it, and anything still owed on it, so you can see what's holding a mix up. To move a song along, change its Development Stage in Notion. gryCE catches up within 30 minutes.</p>
+    </section>
+<section class="card">
       <h2>Support: View as</h2>
       <p>Support members get a <strong>Support</strong> tile. Pick a member and tap <strong>View as</strong> to see gryCE the way they do, so you can walk them through it. A banner across the top says who you're viewing as. Tap <strong>Exit</strong> to go back to your own page. It also ends by itself after 30 minutes.</p>
       <p>While you're viewing as someone, nothing can be sent: no Mark submitted, notes, acknowledgements or ISRC codes. Every view is logged, and the Leadership Team can see the log.</p>

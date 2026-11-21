@@ -844,6 +844,50 @@ function isrcView(d) {
   ];
 }
 
+// Mix queue (Mix Queue members only) ------------------------------------------
+// Every unreleased song in a mix stage, in the order the work happens. Q runs
+// the queue and Shaah backs him up. Stages change in Notion; this reads them.
+
+const MIX_GROUPS = [
+  { order: 1, tone: 'blue', title: 'Mixing now' },
+  { order: 2, tone: 'amber', title: 'Up next: mix prep' },
+  { order: 3, tone: 'orange', title: 'Mastering' },
+  { order: 4, tone: 'orange', title: 'Re-mastering' },
+  { order: 5, tone: 'red', title: 'Waiting on mix funding' },
+];
+
+function mixRow(q) {
+  const owed = (q.owed ?? []).filter((o) => o.status !== 'Submitted');
+  const inForReview = (q.owed ?? []).filter((o) => o.status === 'Submitted');
+  return el('li', { class: 'take' },
+    el('div', { class: 'take-main' },
+      el('span', { class: 'take-song' }, q.song),
+      q.project && el('span', { class: 'take-name' }, q.project)),
+    el('div', { class: 'take-meta' },
+      el('span', { class: 'tag' }, q.mixers ? `Mix: ${q.mixers}` : 'No mixer set'),
+      q.mastering && el('span', { class: 'tag' }, `Master: ${q.mastering}`),
+      q.target_release_date && el('span', { class: 'due' }, `Target ${fmtDate(q.target_release_date)}`)),
+    owed.length > 0 && el('p', { class: 'take-notes' },
+      'Still owed: ', owed.map((o) => `${o.type ?? 'Deliverable'} from ${o.who}`).join(', ')),
+    inForReview.length > 0 && el('p', { class: 'take-notes' },
+      'In, waiting on review: ', inForReview.map((o) => `${o.type ?? 'Deliverable'} from ${o.who}`).join(', ')));
+}
+
+function mixView(d) {
+  const q = d.mixQueue ?? [];
+  const groups = MIX_GROUPS.map((g) => ({ ...g, rows: q.filter((x) => x.queue_order === g.order) })).filter((g) => g.rows.length);
+  const blocked = q.filter((x) => (x.owed ?? []).some((o) => o.status !== 'Submitted')).length;
+  return [
+    jumpCards(groups.map((g) => ({ title: g.title, count: g.rows.length, target: `mix-${g.order}`, state: g.order === 1 ? 'hot' : null }))),
+    panel('Mix queue', countTag(q.length),
+      el('p', { class: 'small muted' }, q.length
+        ? `${q.length} songs in a mix stage${blocked ? `, ${blocked} still waiting on a deliverable` : ''}. Change a song's stage in Notion and it moves here within 30 minutes.`
+        : 'Nothing in a mix stage right now.'),
+      ...groups.map((g) => anchored(`mix-${g.order}`,
+        group(g.tone, g.title, groupCount(g.rows.length), el('ul', { class: 'takes' }, g.rows.map(mixRow)))))),
+  ];
+}
+
 // Leadership (Leadership only) ------------------------------------------------
 
 // Two kinds of document wait on Leadership:
@@ -1115,6 +1159,11 @@ function homeView(d) {
       const open = songs.filter((s) => !isrcOf(s) && !codedIds.has(s.id)).length;
       return tile('isrc', 'ISRC codes', String(open), open === 1 ? 'Song without a code' : 'Songs without a code');
     })(),
+    me?.mix_queue && (() => {
+      const q = d.mixQueue ?? [];
+      const now = q.filter((x) => x.queue_order === 1).length;
+      return tile('mix', 'Mix queue', String(q.length), now ? `${now} mixing now` : q.length ? 'Songs in a mix stage' : 'Nothing queued', now ? 'hot' : null);
+    })(),
     me?.leadership && (() => {
       const waiting = docsWaiting(d).length;
       return tile('leadership', 'Leadership', String(waiting), waiting ? (waiting === 1 ? 'Doc waiting on you' : 'Docs waiting on you') : 'Nothing waiting', waiting ? 'hot' : null);
@@ -1123,11 +1172,12 @@ function homeView(d) {
 }
 const homeHelp = () => el('a', { class: 'ghost help-button', href: '#help' }, 'How gryCE works');
 
-const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, leadership: leadershipView, support: supportView };
-const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Projects', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', leadership: 'Leadership',
+const VIEWS = { 'leadership/documents': leadDocsView, 'leadership/contributions': leadContribView, owe: oweView, news: newsView, crew: crewView, projects: projectsPage, works: worksView, discography: discographyView, help: helpView, isrc: isrcView, mix: mixView, leadership: leadershipView, support: supportView };
+const VIEW_TITLES = { owe: 'What you owe', news: 'Crew news', crew: 'Crew tasks', projects: 'Projects', works: 'In the works', discography: 'Discography', help: 'Help', isrc: 'ISRC codes', mix: 'Mix queue', leadership: 'Leadership',
   'leadership/documents': 'Documents', 'leadership/contributions': 'Contributions', support: 'Support' };
 // Sections only some members get. Anyone else who types the address lands on Home.
 const allowed = (key) => (key === 'isrc' ? me?.isrc_admin && !viewingAs()
+  : key === 'mix' ? me?.mix_queue
   : key === 'support' ? support?.is_support && !viewingAs()
   : key.startsWith('leadership') ? me?.leadership : true);
 
@@ -1231,6 +1281,10 @@ async function loadIsrc() {
   ]);
   current.isrc = { songs, codes };
 }
+async function loadMixQueue() {
+  if (!me?.mix_queue || !current) return;
+  current.mixQueue = await optionalRows(supabase.rpc('mix_queue'), 'mix queue');
+}
 async function loadLeadership() {
   if (!me?.leadership || !current) return;
   const [documents, contributions] = await Promise.all([
@@ -1269,7 +1323,7 @@ async function refresh() {
     takes: takesRes.data, tasks, announcements, acks, stages, items, contributions, projects, allProjects, effortTakes,
     songs: collectSongs(creditsRes.data, takesRes.data),
   };
-  await Promise.all([loadIsrc(), loadLeadership()]);
+  await Promise.all([loadIsrc(), loadLeadership(), loadMixQueue()]);
   const y = window.scrollY;
   draw();
   window.scrollTo(0, y);
@@ -1281,7 +1335,11 @@ async function render(session) {
   const email = session.user.email;
   // Leadership and ISRC Admin come with v0.4.1. Before its SQL runs, those columns
   // don't exist, so fall back to the basics.
-  let { data, error: meErr } = await supabase.from('artists').select('id, name, leadership, isrc_admin').maybeSingle();
+  let { data, error: meErr } = await supabase.from('artists').select('id, name, leadership, isrc_admin, mix_queue').maybeSingle();
+  // Mix Queue comes with v0.4.24. Before its SQL runs, load without it.
+  if (meErr && /column/i.test(meErr.message)) {
+    ({ data, error: meErr } = await supabase.from('artists').select('id, name, leadership, isrc_admin').maybeSingle());
+  }
   if (meErr && /column/i.test(meErr.message)) {
     ({ data, error: meErr } = await supabase.from('artists').select('id, name').maybeSingle());
   }

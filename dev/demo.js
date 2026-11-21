@@ -7,6 +7,7 @@
 //   member      a regular crew member (default)
 //   leadership  sees Leadership: contributions and the document registry
 //   isrc        an ISRC Admin
+//   mix         runs the Mix queue
 //   support     Support, with the View as tile
 //   viewing     Support, mid View as (banner, read only)
 
@@ -25,7 +26,7 @@ const S = {
 
 const me = {
   id: 'me', name: as === 'viewing' ? 'Demo Member Two' : 'Demo Member',
-  leadership: as === 'leadership', isrc_admin: as === 'isrc', support: as === 'support' || as === 'viewing',
+  leadership: as === 'leadership', mix_queue: as === 'mix' || as === 'leadership', isrc_admin: as === 'isrc', support: as === 'support' || as === 'viewing',
 };
 
 const tables = {
@@ -106,6 +107,12 @@ const rpcs = {
   start_view_as: () => { location.search = '?as=viewing'; return 'Demo Member Two'; },
   stop_view_as: () => { location.search = '?as=support'; return null; },
   issue_isrc: () => 'QT-3ZB-26-00099',
+  mix_queue: () => [
+    { song_id: 's-c', song: 'Copper Wire', stage: 'Mixing', queue_order: 1, project: 'Demo Album', mixers: 'Mix Engineer', mastering: null, target_release_date: day(60), owed: [] },
+    { song_id: 's-x', song: 'Low Light', stage: 'Mixing Prep', queue_order: 2, project: 'Demo Album', mixers: null, mastering: null, target_release_date: null, owed: [{ who: 'Another Artist', type: 'Stems', status: 'Owed' }, { who: 'Demo Member', type: 'Verse', status: 'Submitted' }] },
+    { song_id: 's-y', song: 'Harbor Song', stage: 'Mastering', queue_order: 3, project: 'Remix EP', mixers: 'Mix Engineer', mastering: 'Master Engineer', target_release_date: day(20), owed: [] },
+    { song_id: 's-b', song: 'Night Bus', stage: 'Awaiting Mix Funding', queue_order: 5, project: 'Demo Album', mixers: null, mastering: null, target_release_date: null, owed: [{ who: 'Demo Member', type: 'Lyrics', status: 'Owed' }] },
+  ],
 };
 
 // A query that answers with the table's rows whatever filters are chained on.

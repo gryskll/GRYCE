@@ -359,6 +359,7 @@ const artists = artistPages.map((p) => ({
   isrc_admin: p.properties['ISRC Admin']?.checkbox === true,
   also_known_as: text(p.properties['Also Known As']),
   support: p.properties['Support']?.checkbox === true,
+  mix_queue: p.properties['Mix Queue']?.checkbox === true,
   synced_at: runStart,
 }));
 const artistIds = new Set(artists.map((a) => a.id));
@@ -376,6 +377,8 @@ const songs = songPages.map((p) => ({
   bandcamp_link: url(p.properties['Bandcamp Link']),
   isrc: text(p.properties[ISRC_PROPS.Original])?.toUpperCase() ?? null,
   isrc_reissue: text(p.properties[ISRC_PROPS.Reissue])?.toUpperCase() ?? null,
+  // A song's first Music Project, for the Mix queue.
+  project_id: p.properties['Project']?.relation?.[0]?.id ?? null,
   synced_at: runStart,
 }));
 const songIds = new Set(songs.map((s) => s.id));
@@ -662,8 +665,8 @@ const documents = !DOCUMENTS_DB ? null : await optional('documents', async () =>
 });
 
 // v0.4.1 columns may not exist yet. If the first save fails, save again without them.
-const V041_ARTIST = ['leadership', 'isrc_admin', 'also_known_as', 'support'];
-const V041_SONG = ['isrc', 'isrc_reissue'];
+const V041_ARTIST = ['leadership', 'isrc_admin', 'also_known_as', 'support', 'mix_queue'];
+const V041_SONG = ['isrc', 'isrc_reissue', 'project_id'];
 const without = (rows, keys) => rows.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => !keys.includes(k))));
 async function upsertNewCols(table, rows, cols) {
   try {
