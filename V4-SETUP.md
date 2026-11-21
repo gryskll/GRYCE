@@ -100,3 +100,7 @@ Notion is already renamed. Run `supabase/migrations/v4-5-comments.sql` in the SQ
 Notion is done: Artists has a Support checkbox, ticked for Dragon's Pitchfork and Qthulhu. Run `supabase/migrations/v4-6-view-as.sql` in the SQL Editor, then run the sync so the checkbox reaches Supabase.
 
 Test: sign in as a Support member, tap Support, pick a member, tap View as. The banner shows, there are no Mark submitted buttons, and Exit brings you back.
+
+## v0.4.24: Mix queue
+
+Notion is done: Artists has a Mix Queue checkbox, ticked for Qthulhu and Dragon's Pitchfork. Run `supabase/migrations/v4-7-mix-queue.sql` in the SQL Editor, then run the sync so the checkbox and each song's project reach Supabase. Until the SQL runs, nobody sees the tile.

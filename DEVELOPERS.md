@@ -10,7 +10,7 @@ You don't need an account, keys or crew data for any of this. Reviewers don't ge
 
 1. **Clone it.** `git clone https://github.com/gryskll/gryce`
 2. **Click through the site with made-up data.** From the repo root run `python3 -m http.server 8000` and open `http://localhost:8000/dev/preview.html`. The bar in the corner switches who you are: member, Leadership, ISRC Admin, Support, or mid View as. `dev/demo.js` stands in for Supabase, and the real `docs/app.js` runs on top of it. Sign-in and saving don't do anything there.
-3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 33 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
+3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 36 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
 4. **Read in this order:** this file, `supabase/migrations/v4-6-view-as.sql` (the access model in one place), `scripts/sync-notion.mjs`, then `docs/app.js`.
 
 ### Where we'd like eyes
@@ -90,6 +90,7 @@ Access is decided in Supabase, not in the site. The site just asks for rows and 
   - `issue_isrc(song, kind)`: ISRC Admins only. Locks, picks the next `QT-3ZB-YY-NNNNN`, refuses duplicates.
   - `leadership_contributions()`: Leadership only. Every contribution with names.
   - `group_effort_takes()`: everyone signed in. Who, song and status for deliverables linked to a crew task.
+  - `mix_queue()`: Mix Queue members only (Artists checkbox). Every unreleased song in a mix stage, in work order, with project, mixer, mastering engineer and anything still owed.
 
 **View as (Support).** `private.current_artist_id()` returns the member being viewed while a Support member has an open session in `view_as_sessions`, so every rule above applies unchanged. `private.signed_in_artist_id()` is always the real person. Writes check `private.viewing_as() is null`. Any new write path (insert policy or function that changes data) must add the same check. Sessions are started and ended only through `start_view_as()` and `stop_view_as()`, end after 30 minutes, and stay in the table as the log.
 
@@ -111,7 +112,7 @@ Newer tables and columns are optional: if one is missing, the sync logs "Skipped
 - `docs/app.js`: everything else, about 1,200 lines. Sections are marked with `// Name ----` comments.
   - `el(tag, attrs, ...children)` builds DOM. Falsy children are skipped and arrays are flattened one level, so `cond && el(...)` is the usual pattern. Nested arrays two levels deep print as text. This has caused bugs twice, so spread or `.flat()` them.
   - `refresh()` loads everything once after sign-in into `current`. `draw()` renders the view for `location.hash`.
-  - Routes: `#support`, `#owe`, `#news`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
+  - Routes: `#mix`, `#support`, `#owe`, `#news`, `#crew`, `#projects`, `#projects/<id>`, `#works`, `#discography`, `#help`, `#isrc`, `#leadership`, `#leadership/documents`, `#leadership/contributions`.
   - Building blocks: `panel()` (a card), `group(tone, title, right, ...body)` (a colored box inside a card), `tile()` (Home and section cards), `jumpCards()` (cards that scroll to a group).
   - Links: never print a raw URL. Use `linkButton(url, label?)` for a link field and `richText(tag, attrs, text)` for free text from Notion, which turns any URL in it into a button. `linkLabel()` names the button from the address.
   - Tones are green (done, money in), amber (waiting on you), orange (wants input), blue (tasks, songs, drafts), red (owed or holding things up) and gray. Use them the same way everywhere.

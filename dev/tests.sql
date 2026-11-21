@@ -140,3 +140,15 @@ exception when raise_exception then
   raise notice 'ok  only Support can start a view';
 end $$;
 select pg_temp.check('non-support gets an empty member list', (select count(*) from public.support_members()) = 0);
+
+-- Mix queue: only Mix Queue members see it, and only songs in a mix stage.
+reset role;
+update public.artists set mix_queue = true where email = 'lead@test';
+update public.songs set development_stage = 'Mixing' where id = '00000000-0000-0000-0000-0000000000b1';
+update public.songs set development_stage = 'Recording' where id = '00000000-0000-0000-0000-0000000000b2';
+set role authenticated;
+select pg_temp.login('lead@test');
+select pg_temp.check('mix queue member sees songs in a mix stage', (select array_agg(song) from public.mix_queue()) = array['Song One']);
+select pg_temp.check('mix queue lists what is still owed', (select jsonb_array_length(owed) from public.mix_queue() where song = 'Song One') = 1);
+select pg_temp.login('one@test');
+select pg_temp.check('non-members get an empty mix queue', (select count(*) from public.mix_queue()) = 0);

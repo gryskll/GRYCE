@@ -2,6 +2,10 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.24, November 20, 2026
+- Mix queue: Q and Shaah get a Mix queue tile with every unreleased song in a mix stage, grouped Mixing now, Up next, Mastering and Waiting on mix funding. Each song shows its project, mixer, mastering engineer and anything still owed on it.
+- Notion: a Mix Queue checkbox on Artists decides who sees it.
+
 ## v0.4.23, November 20, 2026
 - Tasks reach the right person by their Owner in Notion, not only by Assignee. Each task shows only to the person it belongs to. A task owned by "A + B" shows to both.
 - Owner is matched to an artist's name or a name in their Also Known As field.
