@@ -24,7 +24,7 @@ const HELP = `
       <ul>
         <li><strong>Requests:</strong> things Shaah or the crew asked everyone for, like lyric sheets. Tap <strong>Acknowledge</strong> once you've seen it.</li>
         <li><strong>Deliverables:</strong> what you owe on a song, like verses, hooks, beats, stems, lyrics, mixes and artwork, with due dates. Overdue ones are flagged in red.</li>
-        <li><strong>Tasks:</strong> tasks that are yours, grouped by project, with Now and This week first. Only you see them.</li>
+        <li><strong>Tasks:</strong> tasks that are yours, grouped by project, with Now and This week first, with their notes from GRYSKLL's records. Only you, and anyone the task is shared with, see them.</li>
         <li><strong>Submitted, waiting on review:</strong> deliverables you've turned in that Shaah hasn't checked yet.</li>
         <li><strong>Done:</strong> tap it to see what's finished. A deliverable marked <strong>Not used</strong> was reviewed and left off the song. You don't owe anything on it.</li>
       </ul>

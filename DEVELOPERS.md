@@ -71,7 +71,7 @@ Every table and the three functions carry a comment explaining what they are (`s
 
 ### Who a task goes to
 
-A GRYSKLL Tasks page shows in gryCE to its **Assignee** (an Artists relation) and to whoever its **Owner** select names. Owner is matched to an artist's Name or any name in their Also Known As field, ignoring case and punctuation, so add a nickname there when the Owner list uses one. "A + B" goes to both. Owner **Crew** shows to every member. A task that reaches nobody stays in Notion. The private Notes field never syncs.
+A GRYSKLL Tasks page shows in gryCE to its **Assignee** (an Artists relation) and to whoever its **Owner** select names. Owner is matched to an artist's Name or any name in their Also Known As field, ignoring case and punctuation, so add a nickname there when the Owner list uses one. "A + B" goes to both. Owner **Crew** shows to every member. A task that reaches nobody stays in Notion. Notes comes along only on tasks that aren't crew tasks (joined after gryCE Note), since only the task's own people can see those. On crew tasks, Notes never syncs.
 
 ### Two Notion connections
 

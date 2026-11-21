@@ -598,10 +598,12 @@ const tasks = !TASKS_DB ? null : await optional('tasks', async () => {
       due_date: firstDate(p, TASK_PROPS.due),
       assignee_ids: assignees,
       is_crew: isCrew,
-      // Group effort: the takes this crew task depends on. gryCE Note is the
-      // crew-facing line. Notes stays private and is never synced.
+      // Group effort: the takes this crew task depends on.
       linked_take_ids: await relation(p, 'Linked Deliverables'),
-      gryce_note: text(p.properties['gryCE Note']),
+      // gryCE Note is the line everyone who can see the task reads. Notes only
+      // comes along on tasks that aren't crew tasks, where the only people who
+      // can see the task are the ones it belongs to. On crew tasks it stays in Notion.
+      gryce_note: [text(p.properties['gryCE Note']), isCrew ? null : text(p.properties['Notes'])].filter(Boolean).join('\n\n') || null,
       link: url(p.properties['Link']),
       // v0.4.28: context for the person the task belongs to.
       project: select(p.properties['Project']),
