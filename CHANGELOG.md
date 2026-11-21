@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.33, November 20, 2026
+- Demos on Google Drive play right in gryCE. Tap Play under the demo. Boombox links still open Boombox.
+
 ## v0.4.32, November 20, 2026
 - Fixed: Upload from your device was blocked as a popup. Now you tap once to connect Google Drive, then choose your file.
 - A progress bar shows while the track uploads, and a heads-up explains what to do if your browser blocks Google's permission window.

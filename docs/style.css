@@ -382,3 +382,8 @@ body.viewing-as .update { display: none; }
 .upload-bar::-webkit-progress-bar { background: rgba(255,255,255,0.08); border-radius: 999px; }
 .upload-bar::-webkit-progress-value { background: var(--accent); border-radius: 999px; transition: width .2s; }
 .upload-bar::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
+
+/* Demos play inline (Google Drive preview player) */
+.demo-play { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.demo-player { width: 100%; }
+.demo-player iframe { width: 100%; aspect-ratio: 16 / 9; max-height: 360px; border: 0; border-radius: 12px; background: #000; }
