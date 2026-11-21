@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.35, November 20, 2026
+- gryCE now checks pasted Drive links are open to anyone with the link before a demo is shared.
+
 ## v0.4.34, November 20, 2026
 - Demos are Google Drive only for now. If a pasted Drive link isn't open to anyone with the link, gryCE says so and how to fix it before sharing.
 - Reactions, comments and demo notes are bigger and labeled, so they're hard to miss.

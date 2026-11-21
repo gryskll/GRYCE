@@ -11,4 +11,4 @@ export const GOOGLE_CLIENT_ID = '276014829574-vjc61m2fq7t7skfei2uf2m7pr83ophh2.a
 // Google API key that checks a pasted Drive link is open to "Anyone with the link"
 // before a demo is shared. Public by design: restrict it to the Google Drive API
 // and to this site in Google Cloud. Leave empty to skip the check.
-export const GOOGLE_API_KEY = '';
+export const GOOGLE_API_KEY = 'AIzaSyC8ewqQ49ZH-BixXie6EOOFh7T9TO-4LpU';
