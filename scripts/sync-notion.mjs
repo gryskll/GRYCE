@@ -371,7 +371,7 @@ async function pushSongUpdates() {
 // Demos shared in gryCE get a page in the Notion Demos database.
 async function pushDemos() {
   if (!NOTION_WRITE_TOKEN) return 0;
-  const pending = await sb('demos?notion_page_id=is.null&push_attempts=lt.5&order=created_at.asc&select=id,artist_id,title,link,note,created_at,push_attempts');
+  const pending = await sb('demos?notion_page_id=is.null&push_attempts=lt.5&order=created_at.asc&select=id,artist_id,title,link,note,created_at,push_attempts,credit_role');
   if (pending.length === 0) return 0;
   const ds = await dataSourceId(DEMOS_DB);
   let sent = 0;
@@ -390,6 +390,7 @@ async function pushDemos() {
             Status: { select: { name: 'New' } },
             Shared: { date: { start: d.created_at.slice(0, 10) } },
             'gryCE ID': { rich_text: rt(d.id) },
+            ...(d.credit_role && { Role: { select: { name: d.credit_role } } }),
           },
         },
       });
@@ -437,12 +438,53 @@ async function pushDemoReactions() {
   return sent;
 }
 
+// A demo set to Picked up in Notion becomes a song in Songs: Idea/Concept,
+// In Progress, the demo's link as Song Link, and the person who shared it
+// credited by the Role they chose. The Song relation on the demo is the guard:
+// a demo with a song linked (made here or by hand) is never turned into another.
+const DEMO_ROLE_PROPS = { Producer: ['Producer(s)'], Vocals: ['Featured Vocalist(s)'], 'Producer and vocals': ['Producer(s)', 'Featured Vocalist(s)'] };
+async function promoteDemos() {
+  if (!NOTION_WRITE_TOKEN) return 0;
+  const pages = await queryAll(await dataSourceId(DEMOS_DB), {
+    and: [
+      { property: 'Status', select: { equals: 'Picked up' } },
+      { property: 'Song', relation: { is_empty: true } },
+    ],
+  });
+  let made = 0;
+  for (const p of pages) {
+    try {
+      const title = text(p.properties['Title']) ?? 'Untitled demo';
+      const link = url(p.properties['Link']);
+      const artistIdsOnDemo = (p.properties['Artist']?.relation ?? []).map((r) => r.id);
+      const role = select(p.properties['Role']);
+      const props = {
+        Name: { title: [{ type: 'text', text: { content: title } }] },
+        Status: { select: { name: 'In Progress' } },
+        'Development Stage': { select: { name: 'Idea/Concept' } },
+      };
+      if (link) props['Song Link'] = { rich_text: [{ type: 'text', text: { content: link, link: { url: link } } }] };
+      for (const prop of DEMO_ROLE_PROPS[role] ?? []) props[prop] = { relation: artistIdsOnDemo.map((id) => ({ id })) };
+      const song = await notionWrite('pages', { method: 'POST', body: { parent: { type: 'data_source_id', data_source_id: SOURCES.songs }, properties: props } });
+      await notionWrite(`pages/${p.id}`, { method: 'PATCH', body: { properties: { Song: { relation: [{ id: song.id }] } } } });
+      await notionWrite('comments', { method: 'POST', body: { parent: { page_id: p.id }, rich_text: [{ type: 'text', text: { content: `Picked up. gryCE created "${title}" in Songs at Idea/Concept${role ? `, crediting the person who shared it as ${role}` : ''}.` } }] } });
+      await notionWrite('comments', { method: 'POST', body: { parent: { page_id: song.id }, rich_text: [{ type: 'text', text: { content: 'Started as a demo shared in gryCE. See the Demos database for the crew\'s reactions.' } }] } });
+      made++;
+    } catch (e) {
+      console.warn(`Demo ${p.id} could not become a song: ${e.message}`);
+    }
+  }
+  return made;
+}
+
 const runStart = new Date().toISOString();
 const pushed = (await optional('member updates push', pushMemberUpdates)) ?? 0;
 const isrcPushed = (await optional('ISRC push', pushIsrcCodes)) ?? 0;
 const songEdits = (await optional('Mix queue edits push', pushSongUpdates)) ?? 0;
 const demosPushed = (await optional('demos push', pushDemos)) ?? 0;
 const reactionsPushed = (await optional('demo reactions push', pushDemoReactions)) ?? 0;
+// Before the pull, so a new song shows up in this same run.
+const demoSongs = (await optional('demos to songs', promoteDemos)) ?? 0;
 
 // 2. Pull ------------------------------------------------------------------
 
@@ -830,7 +872,7 @@ for (const t of staleTables) await deleteStale(t, runStart);
 let demoStatuses = 0;
 await optional('demo statuses', async () => {
   const pages = await queryAll(await dataSourceId(DEMOS_DB));
-  const demos = await sb('demos?select=id,status,hidden');
+  const demos = await sb('demos?select=id,status,hidden,song_id');
   const byId = new Map(demos.map((d) => [d.id, d]));
   for (const p of pages) {
     const id = text(p.properties['gryCE ID']);
@@ -838,8 +880,9 @@ await optional('demo statuses', async () => {
     if (!d) continue;
     const status = select(p.properties['Status']) ?? 'New';
     const hidden = p.properties['Hidden']?.checkbox === true;
-    if (status !== d.status || hidden !== d.hidden) {
-      await sb(`demos?id=eq.${d.id}`, { method: 'PATCH', body: { status, hidden }, prefer: 'return=minimal' });
+    const songId = p.properties['Song']?.relation?.[0]?.id ?? null;
+    if (status !== d.status || hidden !== d.hidden || songId !== (d.song_id ?? null)) {
+      await sb(`demos?id=eq.${d.id}`, { method: 'PATCH', body: { status, hidden, song_id: songId }, prefer: 'return=minimal' });
       demoStatuses++;
     }
   }
@@ -888,6 +931,7 @@ console.log(
     (songEdits ? `, ${songEdits} Mix queue edits` : '') +
     (demosPushed ? `, ${demosPushed} new demos` : '') +
     (reactionsPushed ? `, ${reactionsPushed} demo reactions` : '') +
+    (demoSongs ? `, ${demoSongs} demos made into songs` : '') +
     (demoStatuses ? `, ${demoStatuses} demo statuses` : '') +
     (ackUpdates ? `, updated Acknowledged by on ${ackUpdates}` : '') +
     '.',

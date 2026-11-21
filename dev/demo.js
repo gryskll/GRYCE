@@ -82,7 +82,7 @@ const tables = {
   isrc_codes: [],
   demos: [
     { id: 'dm1', artist_id: 'a2', title: 'Rooftop Sketch', link: 'https://drive.google.com/file/d/demo/view', note: 'Rough idea, needs a hook. Listen from 0:40.', created_at: new Date(Date.now() - 864e5).toISOString(), status: 'New', hidden: false },
-    { id: 'dm2', artist_id: 'me', title: 'Slow Burn', link: 'https://boombox.io/demo', note: null, created_at: new Date(Date.now() - 5 * 864e5).toISOString(), status: 'Maybe', hidden: false },
+    { id: 'dm2', artist_id: 'me', title: 'Slow Burn', link: 'https://boombox.io/demo', note: null, created_at: new Date(Date.now() - 5 * 864e5).toISOString(), status: 'Picked up', hidden: false, credit_role: 'Producer', song_id: 's-z' },
   ],
   demo_reactions: [],
   documents: [
@@ -106,7 +106,7 @@ const rpcs = {
   ],
   demo_summary: () => [
     { demo_id: 'dm1', artist_name: 'Another Artist', feeling: 3, want_on: 1, not_for_me: 0, comments: 1 },
-    { demo_id: 'dm2', artist_name: me.name, feeling: 2, want_on: 2, not_for_me: 1, comments: 1 },
+    { demo_id: 'dm2', artist_name: me.name, feeling: 2, want_on: 2, not_for_me: 1, comments: 1, song_name: 'Slow Burn' },
   ],
   demo_comments: () => [{ demo_id: 'dm2', who: 'Third Artist', reaction: 'want_on', comment: 'I hear a verse on the second half.', updated_at: new Date().toISOString() }],
   mix_people: () => [{ id: 'm1', name: 'Mix Engineer', mixes: true, masters: false }, { id: 'm2', name: 'Master Engineer', mixes: false, masters: true }, { id: 'me', name: me.name, mixes: true, masters: false }],

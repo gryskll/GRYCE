@@ -408,6 +408,7 @@ function oweView(d) {
 // person who shared it and Leadership, and to Notion.
 
 const REACTIONS = [['feeling', 'Feeling it'], ['want_on', 'Want on it'], ['not_for_me', 'Not for me']];
+const DEMO_ROLES = [['Producer', 'the beat or track (Producer)'], ['Vocals', 'vocals'], ['Producer and vocals', 'the beat and vocals']];
 const DEMO_STATUS_TONE = { Maybe: 'doc-needs-input', 'Picked up': 'status-accepted', Passed: '' };
 
 function shareDemoForm() {
@@ -418,14 +419,18 @@ function shareDemoForm() {
     const title = el('input', { type: 'text', maxlength: '120', placeholder: 'Song title', required: true });
     const link = el('input', { type: 'url', maxlength: '500', placeholder: 'Boombox or Google Drive link (https://…)', required: true });
     const note = el('textarea', { rows: '3', maxlength: '1000', placeholder: 'What should the crew listen for? (optional)' });
+    const role = el('select', { required: true },
+      el('option', { value: '' }, 'Choose one'),
+      DEMO_ROLES.map(([v, label]) => el('option', { value: v }, label)));
     const msg = el('p', { class: 'error small', hidden: true });
     const send = el('button', { class: 'primary small', type: 'submit' }, 'Share with the crew');
     box.replaceChildren(el('form', {
       class: 'update-form',
       onsubmit: async (e) => {
         e.preventDefault();
-        const row = { title: title.value.trim(), link: link.value.trim(), note: note.value.trim() || null };
+        const row = { title: title.value.trim(), link: link.value.trim(), note: note.value.trim() || null, credit_role: role.value || null };
         if (!row.title) { msg.textContent = 'Give it a title.'; msg.hidden = false; return; }
+        if (!row.credit_role) { msg.textContent = 'Pick how you’d be credited if it becomes a song.'; msg.hidden = false; return; }
         if (!/^https:\/\//i.test(row.link)) { msg.textContent = 'Links need to start with https://'; msg.hidden = false; return; }
         send.disabled = true;
         const { error } = await supabase.from('demos').insert(row);
@@ -434,7 +439,9 @@ function shareDemoForm() {
       },
     },
     el('p', { class: 'small muted' }, 'The whole crew sees it in Crew news. For a Google Drive file, set sharing to anyone with the link first.'),
-    title, link, note, msg,
+    title, link, note,
+    el('label', { class: 'small' }, 'If it becomes a GRYSKLL song, credit me for ', role),
+    msg,
     el('div', { class: 'row' }, send, el('button', { class: 'link', type: 'button', onclick: closed }, 'Cancel'))));
     title.focus();
   }
@@ -482,6 +489,7 @@ function demoRow(dm, d) {
       linkButton(dm.link, 'Listen'),
       dm.status && dm.status !== 'New' && el('span', { class: `tag ${DEMO_STATUS_TONE[dm.status] ?? ''}` }, dm.status),
       dm.hidden && el('span', { class: 'tag' }, 'Hidden')),
+    dm.song_name && el('p', { class: 'pending small' }, `Now a GRYSKLL song: ${dm.song_name}. It’s in the works at Idea/Concept.`),
     richText('p', { class: 'ann-body' }, dm.note),
     mineDemo
       ? el('p', { class: 'small muted' }, REACTIONS.map(([k, label]) => `${label} ${dm[k] ?? 0}`).join(' · '))
@@ -1494,7 +1502,7 @@ async function refresh() {
     optionalRows(supabase.rpc('group_effort_takes'), 'group efforts'),
     // Demos the crew shared, their reaction counts, your own reactions, and
     // comments on your demos (or every demo, for Leadership).
-    optionalRows(supabase.from('demos').select('id, artist_id, title, link, note, created_at, status, hidden'), 'demos'),
+    optionalRows(supabase.from('demos').select('*'), 'demos'),
     optionalRows(supabase.rpc('demo_summary'), 'demo summary'),
     optionalRows(supabase.from('demo_reactions').select('demo_id, artist_id, reaction, comment'), 'demo reactions'),
     optionalRows(supabase.rpc('demo_comments'), 'demo comments'),

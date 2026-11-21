@@ -86,8 +86,8 @@ const HELP = `
     </section>
 <section class="card">
       <h2>Demos</h2>
-      <p>Got something new? Open <strong>Crew news</strong> and tap <strong>Share a demo</strong>. Give it a title, paste a link to the reference track on Boombox or Google Drive, and add a line about what to listen for. For a Drive file, set sharing to anyone with the link first. The whole crew sees it right away.</p>
-      <p>On someone else's demo, tap <strong>Feeling it</strong>, <strong>Want on it</strong> or <strong>Not for me</strong>, and add a comment if you want. Everyone sees the counts. Only the person who shared it and the Leadership Team see your comment. Leadership marks demos Maybe, Picked up or Passed as the crew decides.</p>
+      <p>Got something new? Open <strong>Crew news</strong> and tap <strong>Share a demo</strong>. Give it a title, paste a link to the reference track on Boombox or Google Drive, and add a line about what to listen for, and choose how you'd be credited if it becomes a GRYSKLL song: the beat or track, vocals, or both. For a Drive file, set sharing to anyone with the link first. The whole crew sees it right away.</p>
+      <p>On someone else's demo, tap <strong>Feeling it</strong>, <strong>Want on it</strong> or <strong>Not for me</strong>, and add a comment if you want. Everyone sees the counts. Only the person who shared it and the Leadership Team see your comment. Leadership marks demos Maybe, Picked up or Passed as the crew decides. A demo that's Picked up becomes a GRYSKLL song: it starts at Idea/Concept, credits you the way you chose, and the demo says what song it became.</p>
     </section>
 <section class="card">
       <h2>Mix queue</h2>

@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.26, November 20, 2026
+- Demos can become GRYSKLL songs. When you share a demo, you choose how you'd be credited if it's picked up: the beat or track, vocals, or both. When Leadership marks it Picked up in Notion, gryCE creates the song in Songs at Idea/Concept with your credit, and the demo shows what song it became.
+
 ## v0.4.25, November 20, 2026
 - Mix queue: Q and Shaah can edit a song's stage, mixer and mastering engineer right in gryCE. Changes reach Notion within 10 minutes, with a note saying who made them.
 - Demos: share a demo in Crew news with a Boombox or Google Drive link. The crew reacts with Feeling it, Want on it or Not for me, plus an optional comment that only the person who shared it and Leadership see.

@@ -10,7 +10,7 @@ You don't need an account, keys or crew data for any of this. Reviewers don't ge
 
 1. **Clone it.** `git clone https://github.com/gryskll/gryce`
 2. **Click through the site with made-up data.** From the repo root run `python3 -m http.server 8000` and open `http://localhost:8000/dev/preview.html`. The bar in the corner switches who you are: member, Leadership, ISRC Admin, Support, or mid View as. `dev/demo.js` stands in for Supabase, and the real `docs/app.js` runs on top of it. Sign-in and saving don't do anything there.
-3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 53 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
+3. **Run the database tests.** With Postgres 15+ running locally: `PGHOST=localhost PGUSER=postgres dev/test-db.sh`. It builds a throwaway database from `supabase/schema.sql` plus every migration (each run twice to prove it's safe to re-run), then runs 56 checks: who sees what, member updates, ISRC numbering and View as. The same tests run on every pull request.
 4. **Read in this order:** this file, `supabase/migrations/v4-6-view-as.sql` (the access model in one place), `scripts/sync-notion.mjs`, then `docs/app.js`.
 
 ### Where we'd like eyes
@@ -56,7 +56,7 @@ Notion database → Supabase table. The sync finds each Notion database by its I
 | Music Projects (all) | `project_index` | Everyone, except Leadership Only projects |
 | Document Number Registry | `documents` | Leadership only |
 | (none, made in gryCE) | `member_updates`, `announcement_acks`, `isrc_codes`, `song_updates`, `view_as_sessions` | Written by the site, see below |
-| Demos (made in gryCE first) | `demos`, `demo_reactions` | Everyone sees demos and counts. Comments: the demo's owner and Leadership. The sync creates the Notion page and reads Status and Hidden back |
+| Demos (made in gryCE first) | `demos`, `demo_reactions` | Everyone sees demos and counts. Comments: the demo's owner and Leadership. The sync creates the Notion page and reads Status, Hidden and Song back. A demo set to Picked up with no Song linked becomes a new Songs page (Idea/Concept, In Progress, credited by the Role the member chose) |
 
 Every table and the three functions carry a comment explaining what they are (`supabase/migrations/v4-5-comments.sql`). In Supabase, open Table Editor and the comment shows under the table name.
 
