@@ -12,7 +12,7 @@ createdb "$DB"
 run() { psql -q -X -v ON_ERROR_STOP=1 -d "$DB" "$@" >/dev/null; }
 run -f dev/stub.sql -f supabase/schema.sql
 # Each migration runs twice in a row, because every one must be safe to re-run.
-for f in supabase/migrations/*.sql; do run -f "$f"; run -f "$f"; done
+for f in $(ls supabase/migrations/*.sql | sort -V); do run -f "$f"; run -f "$f"; done
 if ! psql -q -X -v ON_ERROR_STOP=1 -d "$DB" -f dev/tests.sql 2>&1 | sed -n 's/.*NOTICE:  ok  /  ok  /p; /FAILED\|ERROR/p'; then
   echo "Database tests FAILED."
   exit 1

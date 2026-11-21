@@ -93,7 +93,8 @@ Access is decided in Supabase, not in the site. The site just asks for rows and 
   - `group_effort_takes()`: everyone signed in. Who, song and status for deliverables linked to a crew task.
   - `mix_queue()`: Mix Queue members only (Artists checkbox). Every unreleased song in a mix stage, in work order, with project, mixer, mastering engineer and anything still owed.
   - `mix_people()`: Mix Queue members only. Who can be picked as mixer or mastering engineer.
-  - `demo_summary()`: everyone signed in. Who shared each demo and its reaction counts. `demo_comments()`: comments with names, for the demo's owner and Leadership only.
+  - `demo_summary()`: everyone signed in. Who shared each demo and its reaction counts. `demo_comments()`: feedback with names, tags and the helpful mark, for the demo's owner and Leadership only.
+  - `mark_feedback_helpful(demo, artist, on)`: the demo's sharer only. The helpful mark drives rewards, so `helpful_at` has no column grant and changes only here. `my_feedback_thanks()` / `seen_feedback_thanks()`: the giver's thank-you notices on Home. `crew_ears()`: per-member feedback and helpful counts (total, this month, last month) for badges and the monthly shout-out. Badge thresholds live in `EAR_BADGES` in docs/app.js.
 
 **View as (Support).** `private.current_artist_id()` returns the member being viewed while a Support member has an open session in `view_as_sessions`, so every rule above applies unchanged. `private.signed_in_artist_id()` is always the real person. Writes check `private.viewing_as() is null`. Any new write path (insert policy or function that changes data) must add the same check. Sessions are started and ended only through `start_view_as()` and `stop_view_as()`, end after 30 minutes, and stay in the table as the log.
 

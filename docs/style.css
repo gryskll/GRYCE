@@ -402,3 +402,39 @@ body.viewing-as .update { display: none; }
 .demo-comments li { padding: 10px 0; line-height: 1.45; }
 .demo-comments strong { color: var(--accent); }
 .play-btn { font-size: 16px; padding: 10px 20px; }
+
+/* Feedback first (v0.4.36) */
+.demos-intro { font-size: 16px; line-height: 1.5; margin: 0 0 16px; }
+.feedback-box { margin: 16px 0 4px; padding: 18px 20px; border: 2px solid var(--accent); border-radius: 16px; background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.feedback-head { margin: 0 0 4px; font-family: 'Archivo Black', system-ui, sans-serif; font-size: 20px; color: var(--accent); }
+.feedback-sub { margin: 0 0 6px; font-size: 15px; color: var(--muted); line-height: 1.45; }
+.feedback-box textarea { width: 100%; font-size: 16px; min-height: 110px; }
+.feedback-box .primary { font-size: 16px; padding: 12px 24px; }
+.fb-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.fb-tag { background: none; color: var(--text); border: 1px dashed var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.fb-tag.on { border-style: solid; border-color: var(--accent); color: var(--accent); }
+.fb-tag.static { cursor: default; padding: 3px 10px; font-size: 13px; }
+.crew-feels .reaction { font-size: 15px; padding: 8px 14px; }
+.feedback-list { margin: 18px 0 4px; padding: 16px 20px; border-radius: 16px; background: rgba(255,255,255,0.04); }
+.feedback-list .demo-comments li { padding: 14px 0; }
+.fb-who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fb-who strong { font-size: 16px; }
+.fb-react { font-size: 14px; color: var(--muted); }
+.fb-text { margin: 6px 0 8px; font-size: 17px; line-height: 1.5; color: var(--text); white-space: pre-wrap; }
+.helped { background: none; color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 15px; font-weight: 600; }
+.helped:hover:not(.static) { border-color: var(--accent); }
+.helped.on { border-color: var(--accent); color: #0b0b0d; background: var(--accent); }
+.helped.static { display: inline-block; font-size: 13px; padding: 4px 10px; }
+.ear-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255, 196, 84, 0.15); color: #ffc454; border: 1px solid rgba(255, 196, 84, 0.4); }
+.ears-list { list-style: none; padding: 0; margin: 0; }
+.ears-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 16px; }
+.ears-list li:first-child { border-top: 0; }
+.ears-rank { width: 28px; text-align: center; font-weight: 700; }
+.thanks-card { margin: 0 0 20px; padding: 18px 22px; border-radius: 18px; border: 2px solid #ffc454; background: rgba(255, 196, 84, 0.1); }
+.thanks-title { margin: 0 0 6px; font-family: 'Archivo Black', system-ui, sans-serif; font-size: 22px; color: #ffc454; }
+.thanks-card ul { margin: 0 0 10px; padding-left: 18px; font-size: 16px; line-height: 1.5; }
+.thanks-badge { font-size: 16px; font-weight: 600; margin: 0 0 12px; }
+.feedback-box textarea { box-sizing: border-box; background: var(--bg); color: var(--text); border: 1px solid #4a4a55; border-radius: 10px; padding: 12px 14px; font-family: inherit; line-height: 1.5; resize: vertical; }
+.feedback-box textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+.feedback-box .reaction, .feedback-box .fb-tag, .helped { border-color: #55555f; }
+.feedback-box .reaction:hover, .feedback-box .fb-tag:hover { border-color: var(--accent); }

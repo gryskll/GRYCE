@@ -408,7 +408,7 @@ async function pushDemos() {
 // shows the running counts.
 async function pushDemoReactions() {
   if (!NOTION_WRITE_TOKEN) return 0;
-  const pending = await sb('demo_reactions?pushed_at=is.null&select=demo_id,artist_id,reaction,comment,updated_at,demos(notion_page_id)');
+  const pending = await sb('demo_reactions?pushed_at=is.null&select=demo_id,artist_id,reaction,comment,tags,updated_at,demos(notion_page_id)');
   const ready = pending.filter((r) => r.demos?.notion_page_id);
   if (ready.length === 0) return 0;
   const names = new Map((await sb('artists?select=id,name')).map((a) => [a.id, a.name]));
@@ -417,7 +417,8 @@ async function pushDemoReactions() {
   for (const r of ready) {
     try {
       const page = r.demos.notion_page_id;
-      const text = `${names.get(r.artist_id) ?? 'A member'} reacted ${REACTION_LABEL[r.reaction] ?? r.reaction} in gryCE.` + (r.comment ? `\nComment: ${r.comment}` : '');
+      const text = `${names.get(r.artist_id) ?? 'A member'} reacted ${REACTION_LABEL[r.reaction] ?? r.reaction} in gryCE.`
+        + (r.tags?.length ? `\nAbout: ${r.tags.join(', ')}` : '') + (r.comment ? `\nFeedback: ${r.comment}` : '');
       await notionWrite('comments', { method: 'POST', body: { parent: { page_id: page }, rich_text: [{ type: 'text', text: { content: text } }] } });
       await sb(`demo_reactions?demo_id=eq.${r.demo_id}&artist_id=eq.${r.artist_id}&updated_at=eq.${encodeURIComponent(r.updated_at)}`,
         { method: 'PATCH', body: { pushed_at: new Date().toISOString() }, prefer: 'return=minimal' });
