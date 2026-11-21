@@ -2,6 +2,9 @@
 
 What changed in each release, in the words members see. Newest first.
 
+## v0.4.38, November 20, 2026
+- One tap plays a demo. gryCE has its own player now, so you no longer tap Play twice. Playing one demo pauses any other.
+
 ## v0.4.37, November 20, 2026
 - Demos has its own tile and page, separate from Crew news. Crew Ears moved there too.
 
